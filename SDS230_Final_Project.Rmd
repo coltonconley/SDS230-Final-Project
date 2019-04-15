@@ -57,9 +57,7 @@ data.frame(size[], apply(size[,c(2:50)],2, mean) )
 
 table(size$Year2,)
 size
-
 BE
-
 returns
 ```
 
