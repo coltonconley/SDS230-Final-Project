@@ -7,26 +7,46 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+###Introduction 
+This project will examine data from Fama & French 1992 which provides information on the average firm size, monthly return, and beta (?) for 49 different industries. The purpose of this project will be to examine the hypothesis of the Capital Asset Pricing Model (CAPM) which suggests that alpha (define) can not be generated in a given portfolio or industry. 
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-
-## HI MY NAME IS MARCELLO
-
-#marcello is a jabroni
+###Data
+```{r}
+getwd()
+BE <- read.csv("Average BE .csv")
+size <- read.csv("Average Firm Size Monthly.csv")
+returns <- read.csv("Average Weighted Returns Monthly.csv")
 ```
 
-## Including Plots
+The variables we plan to use in this dataset are: 
+* Year
+* Percent Return 
+* Industry (the 49 individual industries as well as composite industries which we will create later during the data cleaning process)
+* Average Firm Size - represented in millions of dollars (?)
+* Beta - *describe the units and description here*
 
-You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+###Data Cleaning
+
+First, across all datasets, when an observation has a firm size, percent return, or beta ratio of zero, the dataset reads -99.99. We will begin by transforming all of these values to zero. 
+```{r}
+#BE <- BE[complete.cases(BE),]
+#size <- size[complete.cases(size),]
+#returns <- returns[complete.cases(returns),]
+BE[BE== -99.99] <- 0 
+size[size == -99.99] <- 0 
+returns[returns == -99.99] <-0 
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Next, we will create composite industry variables to represent more general sectors. 
+
+```{r}
+
+```
+
+Finally, we will reformat the monthly date variables in the Returns and Size dataframes 
+```{r}
+
+```
+
+
