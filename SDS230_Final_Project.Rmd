@@ -36,11 +36,39 @@ First, across all datasets, when an observation has a firm size, percent return,
 BE[BE== -99.99] <- 0 
 size[size == -99.99] <- 0 
 returns[returns == -99.99] <-0 
+
+# separate year from month in "size" dataframe
+size$Year2 <- substr(size$Year, 1, 4)
+size$Month <- substr(size$Year, 5, 6)
+
+# separate year from month in "returns" dataframe
+returns$Year2 <- substr(size$Year, 1, 4)
+returns$Month <- substr(size$Year, 5, 6)
+
+# make an average by year for "size" dataframe
+
+table(size[size$Year2 == "1926",])
+
+
+apply(size[size$Year2 == "1926",], 2, mean)
+size[size$Year2 == "1926",]
+
+data.frame(size[], apply(size[,c(2:50)],2, mean) )
+
+table(size$Year2,)
+size
+
+BE
+
+returns
 ```
 
 Next, we will create composite industry variables to represent more general sectors. 
 
 ```{r}
+
+
+
 
 ```
 
