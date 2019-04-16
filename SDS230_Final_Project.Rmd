@@ -25,8 +25,7 @@ The variables we plan to use in this dataset are:
 * Percent Return 
 * Industry (the 49 individual industries as well as composite industries which we will create later during the data cleaning process)
 * Average Firm Size - represented in millions of dollars (?)
-* Beta - *describe the units and description here*
-
+* Book Equity / Market Equity - *describe the units and description here*
 
 ###Data Cleaning
 
@@ -41,7 +40,7 @@ returns[returns == -99.99] <- 0
 
 ```
 
-Next, we will reformat the monthly date variables in the Returns and Size dataframes 
+Next, we will reformat the monthly date variables in the Returns and Size dataframes. We will also find yearly averages for the returns and size dataframes to standardize all of them by year.
 ```{r}
 # separate year from month in "size" dataframe
 size$Year2 <- substr(size$Year, 1, 4)
@@ -64,18 +63,24 @@ data.frame(size[], apply(size[,c(2:50)],2, mean) )
 table(size$Year2)
 ```
 
-Finally, we will create composite industry variables to represent more general sectors. 
 
+Transpose of data to get proper dataframe, etc - Run as loop; list that is part of the three dataframes - go through three dataframes and grab the information for the industry and use rbind - stack industries on top of each other and then make a column about what industry is it - make it after the fact. Couple of nested loops. We can turn year into a 20 year block and turn stuff into composite sectors 
 ```{r}
-#An inefficient way to do it 
-BE$healthcare <- (BE$Hlth+BE$MedEq+BE$Chems+BE$Drugs+BE$LabEq)/5
-BE$industrials <- (BE$Rubbr+BE$BldMt+BE$Cnstr+BE$Mach+BE$ElcEq+BE$Autos+BE$Aero+BE$Ships+BE$Mines+BE$FabPr)/10
-BE$TMT <- (BE$Fun+BE$Telcm+BE$PerSv+BE$BusSv+BE$Softw+BE$Chips)/6
-BE$financials <- (BE$Banks+BE$Insur+BE$RlEst+BE$Fin)/4
-BE$consumer <- (BE$Books+BE$Hshld+BE$Clths+BE$Rtail+BE$Meals+BE$Food+BE$Beer+BE$Smoke+BE$Toys)/10
-BE$commodities <- (BE$Gold+BE$Steel+BE$Coal+BE$Oil+BE$Txtls)/5
-BE$rother <- (BE$Other+BE$Trans+BE$Whlsl+BE$Boxes+BE$Guns+BE$Agric+BE$Paper+BE$Util)/8
+variables <- list("BE/ME", "Average Yearly Returns", "Firm Size")
+for (i in 2:50){
+  
+}
+
+
 ```
+
+
+Create the composite variables including industry, 20-year period, etc
+```{r}
+
+```
+
+
 
 ###Graphics 
 
