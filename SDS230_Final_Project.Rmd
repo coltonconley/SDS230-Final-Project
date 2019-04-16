@@ -8,7 +8,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ###Introduction 
-This project will examine data from Fama & French 1992 which provides information on the average firm size, monthly return, and beta (?) for 49 different industries. The purpose of this project will be to examine the hypothesis of the Capital Asset Pricing Model (CAPM) which suggests that alpha (define) can not be generated in a given portfolio or industry. 
+This project will examine data from Fama & French 1992 which provides information on the average firm size, monthly return, and beta (?) for 49 different industries. The questions of the project are two-fold: First, we wsih to examine how significant is each variable in predicting returns according to CAPM. Second, we wish to see if there is a difference between CAPM predictions and the actual data through various statistical comparisons including t-tests and permutation tests. 
+
+The purpose of this project will be to examine the hypothesis of the Capital Asset Pricing Model (CAPM) which suggests that alpha (define) can not be generated in a given portfolio or industry. 
 
 ###Data
 ```{r}
@@ -35,8 +37,12 @@ First, across all datasets, when an observation has a firm size, percent return,
 #returns <- returns[complete.cases(returns),]
 BE[BE== -99.99] <- 0 
 size[size == -99.99] <- 0 
-returns[returns == -99.99] <-0 
+returns[returns == -99.99] <- 0 
 
+```
+
+Next, we will reformat the monthly date variables in the Returns and Size dataframes 
+```{r}
 # separate year from month in "size" dataframe
 size$Year2 <- substr(size$Year, 1, 4)
 size$Month <- substr(size$Year, 5, 6)
@@ -55,24 +61,30 @@ size[size$Year2 == "1926",]
 
 data.frame(size[], apply(size[,c(2:50)],2, mean) )
 
-table(size$Year2,)
-size
-BE
-returns
+table(size$Year2)
 ```
 
-Next, we will create composite industry variables to represent more general sectors. 
+Finally, we will create composite industry variables to represent more general sectors. 
 
 ```{r}
-
-
-
-
+#An inefficient way to do it 
+BE$healthcare <- (BE$Hlth+BE$MedEq+BE$Chems+BE$Drugs+BE$LabEq)/5
+BE$industrials <- (BE$Rubbr+BE$BldMt+BE$Cnstr+BE$Mach+BE$ElcEq+BE$Autos+BE$Aero+BE$Ships+BE$Mines+BE$FabPr)/10
+BE$TMT <- (BE$Fun+BE$Telcm+BE$PerSv+BE$BusSv+BE$Softw+BE$Chips)/6
+BE$financials <- (BE$Banks+BE$Insur+BE$RlEst+BE$Fin)/4
+BE$consumer <- (BE$Books+BE$Hshld+BE$Clths+BE$Rtail+BE$Meals+BE$Food+BE$Beer+BE$Smoke+BE$Toys)/10
+BE$commodities <- (BE$Gold+BE$Steel+BE$Coal+BE$Oil+BE$Txtls)/5
+BE$rother <- (BE$Other+BE$Trans+BE$Whlsl+BE$Boxes+BE$Guns+BE$Agric+BE$Paper+BE$Util)/8
 ```
 
-Finally, we will reformat the monthly date variables in the Returns and Size dataframes 
+###Graphics 
+
+First, we will use a boxplot between our composite industries to examine if there is an observable difference between our composite industries in terms of Beta values
 ```{r}
-
+boxplot()
 ```
+
+
+
 
 
