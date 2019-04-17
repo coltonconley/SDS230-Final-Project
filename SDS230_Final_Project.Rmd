@@ -14,7 +14,7 @@ The purpose of this project will be to examine the hypothesis of the Capital Ass
 
 ###Data
 ```{r}
-getwd()
+library(reshape)
 BE <- read.csv("Average BE .csv")
 size <- read.csv("Average Firm Size Monthly.csv")
 returns <- read.csv("Average Weighted Returns Monthly.csv")
@@ -40,38 +40,62 @@ returns[returns == -99.99] <- 0
 
 ```
 
-Next, we will reformat the monthly date variables in the Returns and Size dataframes. We will also find yearly averages for the returns and size dataframes to standardize all of them by year.
+Next, we will reformat the monthly date variables in the Returns and Size dataframes. We will also find yearly averages for the returns and size dataframes to standardize all the dataframes of them by year.
 ```{r}
+size$Year <- substr(size$Year, 1, 4) #Strip off all ofthe month values 
+size <- aggregate(.~Year, data = size, mean)
+
+#returns$Year <- substr(return$Year, 1, 4) #Ask what is going on here
+
 # separate year from month in "size" dataframe
-size$Year2 <- substr(size$Year, 1, 4)
-size$Month <- substr(size$Year, 5, 6)
+#size$Year2 <- substr(size$Year, 1, 4)
+#size$Month <- substr(size$Year, 5, 6)
 
 # separate year from month in "returns" dataframe
-returns$Year2 <- substr(size$Year, 1, 4)
-returns$Month <- substr(size$Year, 5, 6)
+#returns$Year2 <- substr(size$Year, 1, 4)
+#returns$Month <- substr(size$Year, 5, 6)
 
 # make an average by year for "size" dataframe
 
-table(size[size$Year2 == "1926",])
+#table(size[size$Year2 == "1926",])
 
 
-apply(size[size$Year2 == "1926",], 2, mean)
-size[size$Year2 == "1926",]
+#apply(size[size$Year2 == "1926",], 2, mean)
+#size[size$Year2 == "1926",]
 
-data.frame(size[], apply(size[,c(2:50)],2, mean) )
+#data.frame(size[], apply(size[,c(2:50)],2, mean) )
 
-table(size$Year2)
+#table(size$Year2)
 ```
 
+[INSERT DESCRIPTION HERE]
 
-Transpose of data to get proper dataframe, etc - Run as loop; list that is part of the three dataframes - go through three dataframes and grab the information for the industry and use rbind - stack industries on top of each other and then make a column about what industry is it - make it after the fact. Couple of nested loops. We can turn year into a 20 year block and turn stuff into composite sectors 
 ```{r}
-variables <- list("BE/ME", "Average Yearly Returns", "Firm Size")
-for (i in 2:50){
-  
-}
+BE <- melt(BE, id = c("Year"))
+BE$Ind <- BE$variable
+BE$variable <- NULL
+BE$BEMERatio <- BE$value
+BE$value <- NULL
+```
 
+[INSERT DESCRIPTION HERE]
 
+```{r}
+size <- melt(size, id = c("Year"))
+size$size <- size$value
+size$value <- NULL
+size$Ind <- size$variable 
+size$variable <- NULL 
+```
+
+```{r}
+size$YearInd <- paste(size$Year, size$Ind, sep = "_")
+BE$YearInd <- paste(BE$Year, BE$Ind, sep = "_")
+df <- merge(BE, size, by = "YearInd")
+df$YearInd <- NULL
+df$Year.y <- NULL 
+df$Ind.y <- NULL 
+names(df)[1:2] <- c("Year", "Ind")
 ```
 
 
@@ -81,12 +105,10 @@ Create the composite variables including industry, 20-year period, etc
 ```
 
 
-
 ###Graphics 
 
 First, we will use a boxplot between our composite industries to examine if there is an observable difference between our composite industries in terms of Beta values
 ```{r}
-boxplot()
 ```
 
 
