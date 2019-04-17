@@ -45,7 +45,12 @@ Next, we will reformat the monthly date variables in the Returns and Size datafr
 size$Year <- substr(size$Year, 1, 4) #Strip off all ofthe month values 
 size <- aggregate(.~Year, data = size, mean)
 
-#returns$Year <- substr(return$Year, 1, 4) #Ask what is going on here
+returns$Year <- substr(returns$Year, 1, 4) #Ask what is going on here
+returns <- aggregate(.~Year, data = returns, mean)
+
+#Kick off the last row so that we have same sized datasets. 
+BE <- BE[1:89,]
+size <- size[1:89,]
 
 # separate year from month in "size" dataframe
 #size$Year2 <- substr(size$Year, 1, 4)
@@ -89,13 +94,27 @@ size$variable <- NULL
 ```
 
 ```{r}
+returns <- melt(returns, id = c("Year"))
+returns$returns <- returns$value
+returns$value <- NULL 
+returns$Ind <- returns$variable
+size$variable <- NULL
+```
+
+
+```{r}
 size$YearInd <- paste(size$Year, size$Ind, sep = "_")
 BE$YearInd <- paste(BE$Year, BE$Ind, sep = "_")
-df <- merge(BE, size, by = "YearInd")
+returns$YearInd <- paste(returns$Year, BE$Ind, sep = "_")
+df <- merge(size, BE, by = "YearInd")
+df <- merge(df, returns, by = "YearInd")
 df$YearInd <- NULL
 df$Year.y <- NULL 
 df$Ind.y <- NULL 
-names(df)[1:2] <- c("Year", "Ind")
+df$variable <- NULL
+df$Year <- NULL
+df$Ind.x <- NULL
+names(df)[1] <- "Year"
 ```
 
 
@@ -109,6 +128,7 @@ Create the composite variables including industry, 20-year period, etc
 
 First, we will use a boxplot between our composite industries to examine if there is an observable difference between our composite industries in terms of Beta values
 ```{r}
+
 ```
 
 
