@@ -25,6 +25,7 @@ library(leaps)
 BE <- read.csv("Average BE .csv")
 size <- read.csv("Average Firm Size Monthly.csv")
 returns <- read.csv("Average Weighted Returns Monthly.csv")
+rf <- read.csv("RP-RF.csv")
 ```
 
 The variables we plan to use and create in this dataset are: 
@@ -48,6 +49,7 @@ First, across all datasets, when an observation has a firm size, percent return,
 BE[BE== -99.99] <- 0 
 size[size == -99.99] <- 0 
 returns[returns == -99.99] <- 0 
+rf[rf == -99.99] <- 0
 
 ```
 
@@ -59,9 +61,14 @@ size <- aggregate(.~Year, data = size, mean)
 returns$Year <- substr(returns$Year, 1, 4) #Ask what is going on here
 returns <- aggregate(.~Year, data = returns, mean)
 
+rf$Year <- substr(rf$Year,1,4)
+rf <- aggregate(.~Year, data= rf, mean)
+rf$mktret <- rf$Mkt.RF+rf$RF #This creates the column for market return - done by adding back the risk free rate to the risk free market return
+
 #Kick off the last row so that we have same sized datasets. 
 BE <- BE[1:89,]
 size <- size[1:89,]
+rf <- rf[1:89,]
 
 # separate year from month in "size" dataframe
 #size$Year2 <- substr(size$Year, 1, 4)
@@ -137,7 +144,7 @@ df$CompInd <- recode(df$Ind, "'Hlth' = 'Healthcare'; 'MedEq' = 'Healthcare'; 'Dr
 Next, we create Beta for each industry, which represents the covariance of market returns and a given industry returns divided by the variance in market returns. 
 
 ```{r}
-
+#use the repeat function, sort function, order function - 
 ```
 
 
@@ -157,8 +164,7 @@ Quantile plot will be of residuals of one of the models we make - same with resi
 Multinomial regressions - total yearly return predicted by any number of factors 
 
 ###Basic Tests
-
-
+We might want to consider a tukey comparison if we are comparing pairs of means 
 ###Permutation Test 
 
 ###Multiple Regressions
