@@ -144,7 +144,14 @@ df$CompInd <- recode(df$Ind, "'Hlth' = 'Healthcare'; 'MedEq' = 'Healthcare'; 'Dr
 Next, we create Beta for each industry, which represents the covariance of market returns and a given industry returns divided by the variance in market returns. 
 
 ```{r}
-#use the repeat function, sort function, order function - 
+df <- merge(df, rf, by = "Year")
+df$Year <- as.factor(df$Year)
+df$Beta <- NA
+for(i in unique(df$Ind)){
+  temp <- df[df$Ind == i,]
+  a <- (cov(temp$returns,temp$mktret))/(var(temp$mktret))
+  df$Beta[df$Ind==i] <- a
+}
 ```
 
 
