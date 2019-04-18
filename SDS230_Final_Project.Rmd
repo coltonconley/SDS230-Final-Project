@@ -25,14 +25,19 @@ library(leaps)
 BE <- read.csv("Average BE .csv")
 size <- read.csv("Average Firm Size Monthly.csv")
 returns <- read.csv("Average Weighted Returns Monthly.csv")
+rf <- read.csv("RP-RF.csv")
 ```
 
-The variables we plan to use in this dataset are: 
+The variables we plan to use and create in this dataset are: 
 * Year
-* Percent Return 
+* Industry Percent Return 
 * Industry (the 49 individual industries as well as composite industries which we will create later during the data cleaning process)
-* Average Firm Size - represented in millions of dollars (?)
+* Average Firm Size - represented in millions of dollars 
 * Book Equity / Market Equity - *describe the units and description here*
+* Market Return
+* Risk Free Rate
+* Beta 
+
 
 ###Data Cleaning
 
@@ -44,6 +49,7 @@ First, across all datasets, when an observation has a firm size, percent return,
 BE[BE== -99.99] <- 0 
 size[size == -99.99] <- 0 
 returns[returns == -99.99] <- 0 
+rf[rf == -99.99] <- 0
 
 ```
 
@@ -55,9 +61,14 @@ size <- aggregate(.~Year, data = size, mean)
 returns$Year <- substr(returns$Year, 1, 4) #Ask what is going on here
 returns <- aggregate(.~Year, data = returns, mean)
 
+rf$Year <- substr(rf$Year,1,4)
+rf <- aggregate(.~Year, data= rf, mean)
+rf$mktret <- rf$Mkt.RF+rf$RF #This creates the column for market return - done by adding back the risk free rate to the risk free market return
+
 #Kick off the last row so that we have same sized datasets. 
 BE <- BE[1:89,]
 size <- size[1:89,]
+rf <- rf[1:89,]
 
 # separate year from month in "size" dataframe
 #size$Year2 <- substr(size$Year, 1, 4)
@@ -80,7 +91,7 @@ size <- size[1:89,]
 #table(size$Year2)
 ```
 
-[INSERT DESCRIPTION HERE]
+Before using our datasets, we need to convert them from wide form to long form. Using the melt function, we alter our dataframe such that it transforms from a 89x50 dataframe to a 4361x3 dataframe. We then adjust the names of the columns, eliminate repeated columns, and repeat for our other dataframes (returns and size).
 
 ```{r}
 BE <- melt(BE, id = c("Year"))
@@ -89,8 +100,6 @@ BE$variable <- NULL
 BE$BEMERatio <- BE$value
 BE$value <- NULL
 ```
-
-[INSERT DESCRIPTION HERE]
 
 ```{r}
 size <- melt(size, id = c("Year"))
@@ -108,6 +117,7 @@ returns$Ind <- returns$variable
 size$variable <- NULL
 ```
 
+Once we have transformed the dataframes into the appropriate form, we can then merge the datasets together into the final, usable dataframe. Because year and industry are repeated so many times in each of the datasets, to merge, we must create a YearInd variable that represents an industry in a unique year. After merging, we delete the repeated columns and rename the remaining ones. 
 
 ```{r}
 size$YearInd <- paste(size$Year, size$Ind, sep = "_")
@@ -125,10 +135,16 @@ names(df)[1] <- "Year"
 ```
 
 
-Create the composite variables including industry, 20-year period, etc
+To expand our realm of analysis, we have decided to create a number of variables: composite industry (categorical), Beta (continuous), and... Below is the series of code used to create our new variables. We begin with our composite industry variable which recodes our 49 independent industries into eight overarching industries (Healthcare, Industrials, TMT, Financials, Consumer, Utilities, Commodities, and Other).
 ```{r}
-df$CompInd <- recode(df$Ind, "'Hlth' = 'Healthcare'; 'MedEq' = 'Healthcare'; 'Drugs' = 'Healthcare'; 'Chems' = 'Healthcare'; 'LabEq' = 'Healthcare'; 'Rubbr' = 'Industrials'; 'BldMt' = 'Industrials'; 'Cnstr' = 'Industrials'; 'Mach' = 'Industrials'; 'ElcEq' = 'Industrials'; 'Autos' = 'Industrials'; 'Aero' = 'Industrials'; 'Ships' = 'Industrials'; 'Mines' = 'Industrials'; 'FabPr' = 'Industrials'; 'Fun' = 'TMT'; 'Telcm' = 'TMT'; 'PerSv' = 'TMT'; 'BusSv' = 'TMT'; 'Softw' = 'TMT'; 'Chips' = 'TMT'; 'Paper' = 'TMT'; 'Banks' = 'Financials'; 'Insur' = 'Financials'; 'RlEst' = 'Financials'; 'Fin' = 'Financials'; 'Food' = 'Consumer'; 'Soda' = 'Consumer'; 'Beer' = 'Consumer'; 'Smoke' = 'Consumer'; 'Books' = 'Consumer'; 'Clths' = 'Consumer'; 'Hshld' = 'Consumer'; 'Meals' = 'Consumer'; 'Rtail' = 'Consumer'; 'Util' = 'Utilities'; 'Gold' = 'Commondities'; 'Coal' = 'Commondities'; 'Oil' = 'Commondities'; 'Steel' = 'Commondities'; 'Txtls' = 'Commondities'; 'Other' = 'Other'; 'Trans' = 'Other'; 'Boxes' = 'Other'; 'Guns' = 'Other'; 'Whlsl' = 'Other'; 'Agric' = 'Other'; 'Toys' = 'Other'")
+df$CompInd <- recode(df$Ind, "'Hlth' = 'Healthcare'; 'MedEq' = 'Healthcare'; 'Drugs' = 'Healthcare'; 'Chems' = 'Healthcare'; 'LabEq' = 'Healthcare'; 'Rubbr' = 'Industrials'; 'BldMt' = 'Industrials'; 'Cnstr' = 'Industrials'; 'Mach' = 'Industrials'; 'ElcEq' = 'Industrials'; 'Autos' = 'Industrials'; 'Aero' = 'Industrials'; 'Ships' = 'Industrials'; 'Mines' = 'Industrials'; 'FabPr' = 'Industrials'; 'Fun' = 'TMT'; 'Telcm' = 'TMT'; 'PerSv' = 'TMT'; 'BusSv' = 'TMT'; 'Softw' = 'TMT'; 'Chips' = 'TMT'; 'Paper' = 'TMT'; 'Banks' = 'Financials'; 'Insur' = 'Financials'; 'RlEst' = 'Financials'; 'Fin' = 'Financials'; 'Food' = 'Consumer'; 'Soda' = 'Consumer'; 'Beer' = 'Consumer'; 'Smoke' = 'Consumer'; 'Books' = 'Consumer'; 'Clths' = 'Consumer'; 'Hshld' = 'Consumer'; 'Meals' = 'Consumer'; 'Rtail' = 'Consumer'; 'Util' = 'Utilities'; 'Gold' = 'Commodities'; 'Coal' = 'Commodities'; 'Oil' = 'Commodities'; 'Steel' = 'Commodities'; 'Txtls' = 'Commodities'; 'Other' = 'Other'; 'Trans' = 'Other'; 'Boxes' = 'Other'; 'Guns' = 'Other'; 'Whlsl' = 'Other'; 'Agric' = 'Other'; 'Toys' = 'Other'")
 
+```
+
+Next, we create Beta for each industry, which represents the covariance of market returns and a given industry returns divided by the variance in market returns. 
+
+```{r}
+#use the repeat function, sort function, order function - 
 ```
 
 
@@ -147,7 +163,16 @@ Quantile plot will be of residuals of one of the models we make - same with resi
 
 Multinomial regressions - total yearly return predicted by any number of factors 
 
+###Basic Tests
+We might want to consider a tukey comparison if we are comparing pairs of means 
+###Permutation Test 
 
+###Multiple Regressions
+
+###ANOVA, Logit, Multinomial, or Webscraping 
+
+
+###Final Comments 
 
 
 
