@@ -15,6 +15,13 @@ The purpose of this project will be to examine the hypothesis of the Capital Ass
 ###Data
 ```{r}
 library(reshape)
+library(car)
+library(leaps)
+library(lubridate)
+library(rvest)
+library(olsrr)
+library(corrplot)
+library(leaps)
 BE <- read.csv("Average BE .csv")
 size <- read.csv("Average Firm Size Monthly.csv")
 returns <- read.csv("Average Weighted Returns Monthly.csv")
@@ -40,7 +47,7 @@ returns[returns == -99.99] <- 0
 
 ```
 
-Next, we will reformat the monthly date variables in the Returns and Size dataframes. We will also find yearly averages for the returns and size dataframes to standardize all the dataframes of them by year.
+Next, we will reformat the year variable to include only the year as oppossed to year-month while finding the yearly averages for the "returns" and "size" dataframes. We also decided to cut off the last year in the our  date variables in the Returns and Size dataframes. We will also find yearly averages for the returns and size dataframes to standardize all the dataframes of them by year.
 ```{r}
 size$Year <- substr(size$Year, 1, 4) #Strip off all ofthe month values 
 size <- aggregate(.~Year, data = size, mean)
@@ -120,16 +127,27 @@ names(df)[1] <- "Year"
 
 Create the composite variables including industry, 20-year period, etc
 ```{r}
+df$CompInd <- recode(df$Ind, "'Hlth' = 'Healthcare'; 'MedEq' = 'Healthcare'; 'Drugs' = 'Healthcare'; 'Chems' = 'Healthcare'; 'LabEq' = 'Healthcare'; 'Rubbr' = 'Industrials'; 'BldMt' = 'Industrials'; 'Cnstr' = 'Industrials'; 'Mach' = 'Industrials'; 'ElcEq' = 'Industrials'; 'Autos' = 'Industrials'; 'Aero' = 'Industrials'; 'Ships' = 'Industrials'; 'Mines' = 'Industrials'; 'FabPr' = 'Industrials'; 'Fun' = 'TMT'; 'Telcm' = 'TMT'; 'PerSv' = 'TMT'; 'BusSv' = 'TMT'; 'Softw' = 'TMT'; 'Chips' = 'TMT'; 'Paper' = 'TMT'; 'Banks' = 'Financials'; 'Insur' = 'Financials'; 'RlEst' = 'Financials'; 'Fin' = 'Financials'; 'Food' = 'Consumer'; 'Soda' = 'Consumer'; 'Beer' = 'Consumer'; 'Smoke' = 'Consumer'; 'Books' = 'Consumer'; 'Clths' = 'Consumer'; 'Hshld' = 'Consumer'; 'Meals' = 'Consumer'; 'Rtail' = 'Consumer'; 'Util' = 'Utilities'; 'Gold' = 'Commondities'; 'Coal' = 'Commondities'; 'Oil' = 'Commondities'; 'Steel' = 'Commondities'; 'Txtls' = 'Commondities'; 'Other' = 'Other'; 'Trans' = 'Other'; 'Boxes' = 'Other'; 'Guns' = 'Other'; 'Whlsl' = 'Other'; 'Agric' = 'Other'; 'Toys' = 'Other'")
 
 ```
 
 
 ###Graphics 
 
-First, we will use a boxplot between our composite industries to examine if there is an observable difference between our composite industries in terms of Beta values
+Boxplot between composite industries to see if they have similar variance, similar average returns, etc 
 ```{r}
 
 ```
+
+Scatterplot of Beta versus returns 
+
+Multiple histogram yearly returns or size for a given industry and for the market.
+
+Quantile plot will be of residuals of one of the models we make - same with residual plot 
+
+Multinomial regressions - total yearly return predicted by any number of factors 
+
+
 
 
 
