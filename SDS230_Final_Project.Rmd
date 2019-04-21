@@ -144,24 +144,36 @@ df$CompInd <- recode(df$Ind, "'Hlth' = 'Healthcare'; 'MedEq' = 'Healthcare'; 'Dr
 Next, we create Beta for each industry, which represents the covariance of market returns and a given industry returns divided by the variance in market returns. 
 
 ```{r}
-#use the repeat function, sort function, order function - 
+df <- merge(df, rf, by = "Year")
+df$Year <- as.factor(df$Year)
+df$Beta <- NA
+for(i in unique(df$Ind)){
+  temp <- df[df$Ind == i,]
+  a <- (cov(temp$returns,temp$mktret))/(var(temp$mktret))
+  df$Beta[df$Ind==i] <- a
+}
 ```
 
 
 ###Graphics 
 
-Boxplot between composite industries to see if they have similar variance, similar average returns, etc 
+First, we examine a boxplot between firm size and composite industry to examine if there are noticeable differences in the variance between different industries (including variance and mean). We would need to use a t-test of some sort to examine whether these differences were statistically significant.
+```{r}
+boxplot(df$CompInd, df$size, main = "Boxplot of Composite Industry and Size") #This won't work because composite industry exists for every year as does size
+```
+
+Next, we examine a scatterplot between Beta and returns as we expect to use Beta in several of our regressions to predict returns. 
+```{r}
+plot(df$Beta, df$returns, main = "Scatterplot of Beta versus Returns", pch = 24, col = "blue", xlab = "Beta", ylab = "Average Yearly Returns")
+```
+
+Histogram for BE/ME, size, or returns for the years of a particular industry. 
 ```{r}
 
 ```
 
-Scatterplot of Beta versus returns 
-
 Multiple histogram yearly returns or size for a given industry and for the market.
 
-Quantile plot will be of residuals of one of the models we make - same with residual plot 
-
-Multinomial regressions - total yearly return predicted by any number of factors 
 
 ###Basic Tests
 We might want to consider a tukey comparison if we are comparing pairs of means 
