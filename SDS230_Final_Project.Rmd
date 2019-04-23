@@ -12,8 +12,7 @@ This project will examine data from Fama & French 1992 which provides informatio
 
 The purpose of this project will be to examine the hypothesis of the Capital Asset Pricing Model (CAPM) which suggests that alpha (define) can not be generated in a given portfolio or industry. 
 
-###Data
-```{r}
+```{r, include = FALSE}
 library(reshape)
 library(car)
 library(leaps)
@@ -22,6 +21,13 @@ library(rvest)
 library(olsrr)
 library(corrplot)
 library(leaps)
+library(car)
+source("http://www.reuningscherer.net/s&ds230/Rfuncs/regJDRS.txt")
+```
+
+
+###Data
+```{r}
 BE <- read.csv("Average BE .csv")
 size <- read.csv("Average Firm Size Monthly.csv")
 returns <- read.csv("Average Weighted Returns Monthly.csv")
@@ -30,13 +36,13 @@ rf <- read.csv("RP-RF.csv")
 
 The variables we plan to use and create in this dataset are: 
 * Year
-* Industry Percent Return 
+* Industry Percent Return - The percent return on investment for a given industry in a given year 
 * Industry (the 49 individual industries as well as composite industries which we will create later during the data cleaning process)
-* Average Firm Size - represented in millions of dollars 
-* Book Equity / Market Equity - *describe the units and description here*
-* Market Return
-* Risk Free Rate
-* Beta 
+* Average Firm Size - The average market capitalization value of a firm in a given year represented in millions of dollars 
+* Book Equity / Market Equity - 
+* Market Return - Defined as "The return on the overall theoretical market portfolio which includes all assets and having the portfolio weighted for value."
+* Risk Free Rate - Defined as "the rate of return a hypothetical investment with no risk of financial loss"
+* Beta - Defined as "a measure of a stock's volatility in relation to the market" The formula for Beta is [Insert covariance formula here]
 
 
 ###Data Cleaning
@@ -137,7 +143,7 @@ names(df)[1] <- "Year"
 
 To expand our realm of analysis, we have decided to create a number of variables: composite industry (categorical), Beta (continuous), and... Below is the series of code used to create our new variables. We begin with our composite industry variable which recodes our 49 independent industries into eight overarching industries (Healthcare, Industrials, TMT, Financials, Consumer, Utilities, Commodities, and Other).
 ```{r}
-df$CompInd <- recode(df$Ind, "'Hlth' = 'Healthcare'; 'MedEq' = 'Healthcare'; 'Drugs' = 'Healthcare'; 'Chems' = 'Healthcare'; 'LabEq' = 'Healthcare'; 'Rubbr' = 'Industrials'; 'BldMt' = 'Industrials'; 'Cnstr' = 'Industrials'; 'Mach' = 'Industrials'; 'ElcEq' = 'Industrials'; 'Autos' = 'Industrials'; 'Aero' = 'Industrials'; 'Ships' = 'Industrials'; 'Mines' = 'Industrials'; 'FabPr' = 'Industrials'; 'Fun' = 'TMT'; 'Telcm' = 'TMT'; 'PerSv' = 'TMT'; 'BusSv' = 'TMT'; 'Softw' = 'TMT'; 'Chips' = 'TMT'; 'Paper' = 'TMT'; 'Banks' = 'Financials'; 'Insur' = 'Financials'; 'RlEst' = 'Financials'; 'Fin' = 'Financials'; 'Food' = 'Consumer'; 'Soda' = 'Consumer'; 'Beer' = 'Consumer'; 'Smoke' = 'Consumer'; 'Books' = 'Consumer'; 'Clths' = 'Consumer'; 'Hshld' = 'Consumer'; 'Meals' = 'Consumer'; 'Rtail' = 'Consumer'; 'Util' = 'Utilities'; 'Gold' = 'Commodities'; 'Coal' = 'Commodities'; 'Oil' = 'Commodities'; 'Steel' = 'Commodities'; 'Txtls' = 'Commodities'; 'Other' = 'Other'; 'Trans' = 'Other'; 'Boxes' = 'Other'; 'Guns' = 'Other'; 'Whlsl' = 'Other'; 'Agric' = 'Other'; 'Toys' = 'Other'")
+df$CompInd <- recode(df$Ind, "'Hlth' = 'Healthcare'; 'MedEq' = 'Healthcare'; 'Drugs' = 'Healthcare'; 'Chems' = 'Healthcare'; 'LabEq' = 'Healthcare'; 'Rubbr' = 'Industrials'; 'BldMt' = 'Industrials'; 'Cnstr' = 'Industrials'; 'Mach' = 'Industrials'; 'ElcEq' = 'Industrials'; 'Autos' = 'Industrials'; 'Aero' = 'Industrials'; 'Ships' = 'Industrials'; 'Mines' = 'Industrials'; 'FabPr' = 'Industrials'; 'Fun' = 'TMT'; 'Telcm' = 'TMT'; 'PerSv' = 'TMT'; 'BusSv' = 'TMT'; 'Softw' = 'TMT'; 'Chips' = 'TMT'; 'Paper' = 'TMT';'Hardw' = 'TMT'; 'Banks' = 'Financials'; 'Insur' = 'Financials'; 'RlEst' = 'Financials'; 'Fin' = 'Financials'; 'Food' = 'Consumer'; 'Soda' = 'Consumer'; 'Beer' = 'Consumer'; 'Smoke' = 'Consumer'; 'Books' = 'Consumer'; 'Clths' = 'Consumer'; 'Hshld' = 'Consumer'; 'Meals' = 'Consumer'; 'Rtail' = 'Consumer'; 'Util' = 'Utilities'; 'Gold' = 'Commodities'; 'Coal' = 'Commodities'; 'Oil' = 'Commodities'; 'Steel' = 'Commodities'; 'Txtls' = 'Commodities'; 'Other' = 'Other'; 'Trans' = 'Other'; 'Boxes' = 'Other'; 'Guns' = 'Other'; 'Whlsl' = 'Other'; 'Agric' = 'Other'; 'Toys' = 'Other'")
 
 ```
 
@@ -157,14 +163,21 @@ for(i in unique(df$Ind)){
 
 ###Graphics 
 
-First, we examine a boxplot between firm size and composite industry to examine if there are noticeable differences in the variance between different industries (including variance and mean). We would need to use a t-test of some sort to examine whether these differences were statistically significant.
+First, we examine a boxplot between firm size and composite industry to examine if there are noticeable differences in the log  size between the composite industries. We would need to use a t-test of some sort to examine whether these differences were statistically significant. We added 1 inside the log because some of the firm sizes are technically zero, which causes an error given that we are taking the natural log. 
 ```{r}
-boxplot(df$CompInd, df$size, main = "Boxplot of Composite Industry and Size") #This won't work because composite industry exists for every year as does size
+boxplot(log(df$size + 1)~df$CompInd, main = "Boxplot of Composite Industry and Size", col = c("red", "blue", "green", "yellow","orange", "magenta", "turquoise", "lime green"), ylab = "Log of Size", las = 2, cex.axis = .8) 
+```
+Overall, the industries appear to be relatively similar and there are no observable skews within any of the industries. Next, we will check if the data has a normal distribution within each composite industry.
+
+```{r}
+qqPlot(df$returns~df$CompInd)
+qqPlot(log(df$size+1)~df$CompInd) #Given that size is in dollars, we found that a log transformation would be valuable to preserving normality. 
+qqPlot(df$BEMERatio~df$CompInd)
 ```
 
-Next, we examine a scatterplot between Beta and returns as we expect to use Beta in several of our regressions to predict returns. 
+Returns over time for a specific composite industry  
 ```{r}
-plot(df$Beta, df$returns, main = "Scatterplot of Beta versus Returns", pch = 24, col = "blue", xlab = "Beta", ylab = "Average Yearly Returns")
+plot(df$returns ~ df$Year, main = "Scatterplot of Year versus Average Yearly Returns", pch = 24, col = "blue", xlab = "Year", ylab = "Average Yearly Returns")
 ```
 
 Histogram for BE/ME, size, or returns for the years of a particular industry. 
@@ -172,17 +185,13 @@ Histogram for BE/ME, size, or returns for the years of a particular industry.
 
 ```
 
-Multiple histogram yearly returns or size for a given industry and for the market.
-
-
 ###Basic Tests
-We might want to consider a tukey comparison if we are comparing pairs of means 
+
 ###Permutation Test 
 
 ###Multiple Regressions
 
 ###ANOVA, Logit, Multinomial, or Webscraping 
-
 
 ###Final Comments 
 
