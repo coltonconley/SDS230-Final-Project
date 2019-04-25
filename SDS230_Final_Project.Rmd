@@ -174,6 +174,16 @@ aggdf$AvgReturns <- aggdf$value
 aggdf$value <- NULL
 aggdf$Year <- aggdf$Row.Labels
 aggdf$Row.Labels <- NULL
+
+
+#this is how we do it within r itself instead of making a new dataset and doing it through excel
+indreturnscomp <- aggregate(df$returns ~ df$CompInd + df$Year, df, mean)
+colnames(indreturnscomp) <- c("CompInd", "Year", "Composite Returns")
+indreturnscomp
+
+newdf <- merge(df, indreturnscomp, all.x=T, by = c("Year", "CompInd"))
+
+newdf
 ```
 Now, we will add other composite variables to our aggregated dataset.
 
