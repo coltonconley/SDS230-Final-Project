@@ -8,22 +8,41 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ###Introduction 
-This project will examine data from Fama & French 1992 which provides information on the average firm size, monthly return, and beta (?) for 49 different industries. The purpose of this project will be to examine the hypothesis of the Capital Asset Pricing Model (CAPM) which suggests that alpha (define) can not be generated in a given portfolio or industry. 
+This project will examine data from Fama & French 1992 which provides information on the average firm size, monthly return, and beta (?) for 49 different industries. The questions of the project are two-fold: First, we wsih to examine how significant is each variable in predicting returns according to CAPM. Second, we wish to see if there is a difference between CAPM predictions and the actual data through various statistical comparisons including t-tests and permutation tests. 
+
+The purpose of this project will be to examine the hypothesis of the Capital Asset Pricing Model (CAPM) which suggests that alpha (define) can not be generated in a given portfolio or industry. 
+
+```{r, include = FALSE}
+library(reshape)
+library(car)
+library(leaps)
+library(lubridate)
+library(rvest)
+library(olsrr)
+library(corrplot)
+library(leaps)
+library(car)
+source("http://www.reuningscherer.net/s&ds230/Rfuncs/regJDRS.txt")
+```
+
 
 ###Data
 ```{r}
-getwd()
 BE <- read.csv("Average BE .csv")
 size <- read.csv("Average Firm Size Monthly.csv")
 returns <- read.csv("Average Weighted Returns Monthly.csv")
+rf <- read.csv("RP-RF.csv")
 ```
 
-The variables we plan to use in this dataset are: 
+The variables we plan to use and create in this dataset are: 
 * Year
-* Percent Return 
+* Industry Percent Return - The percent return on investment for a given industry in a given year 
 * Industry (the 49 individual industries as well as composite industries which we will create later during the data cleaning process)
-* Average Firm Size - represented in millions of dollars (?)
-* Beta - *describe the units and description here*
+* Average Firm Size - The average market capitalization value of a firm in a given year represented in millions of dollars 
+* Book Equity / Market Equity - 
+* Market Return - Defined as "The return on the overall theoretical market portfolio which includes all assets and having the portfolio weighted for value."
+* Risk Free Rate - Defined as "the rate of return a hypothetical investment with no risk of financial loss"
+* Beta - Defined as "a measure of a stock's volatility in relation to the market" The formula for Beta is [Insert covariance formula here]
 
 
 ###Data Cleaning
@@ -35,46 +54,148 @@ First, across all datasets, when an observation has a firm size, percent return,
 #returns <- returns[complete.cases(returns),]
 BE[BE== -99.99] <- 0 
 size[size == -99.99] <- 0 
-returns[returns == -99.99] <-0 
+returns[returns == -99.99] <- 0 
+rf[rf == -99.99] <- 0
+
+```
+
+Next, we will reformat the year variable to include only the year as oppossed to year-month while finding the yearly averages for the "returns" and "size" dataframes. We also decided to cut off the last year in the our  date variables in the Returns and Size dataframes. We will also find yearly averages for the returns and size dataframes to standardize all the dataframes of them by year.
+```{r}
+size$Year <- substr(size$Year, 1, 4) #Strip off all ofthe month values 
+size <- aggregate(.~Year, data = size, mean)
+
+returns$Year <- substr(returns$Year, 1, 4) #Ask what is going on here
+returns <- aggregate(.~Year, data = returns, mean)
+
+rf$Year <- substr(rf$Year,1,4)
+rf <- aggregate(.~Year, data= rf, mean)
+rf$mktret <- rf$Mkt.RF+rf$RF #This creates the column for market return - done by adding back the risk free rate to the risk free market return
+
+#Kick off the last row so that we have same sized datasets. 
+BE <- BE[1:89,]
+size <- size[1:89,]
+rf <- rf[1:89,]
 
 # separate year from month in "size" dataframe
-size$Year2 <- substr(size$Year, 1, 4)
-size$Month <- substr(size$Year, 5, 6)
+#size$Year2 <- substr(size$Year, 1, 4)
+#size$Month <- substr(size$Year, 5, 6)
 
 # separate year from month in "returns" dataframe
-returns$Year2 <- substr(size$Year, 1, 4)
-returns$Month <- substr(size$Year, 5, 6)
+#returns$Year2 <- substr(size$Year, 1, 4)
+#returns$Month <- substr(size$Year, 5, 6)
 
 # make an average by year for "size" dataframe
 
-table(size[size$Year2 == "1926",])
+#table(size[size$Year2 == "1926",])
 
 
-apply(size[size$Year2 == "1926",], 2, mean)
-size[size$Year2 == "1926",]
+#apply(size[size$Year2 == "1926",], 2, mean)
+#size[size$Year2 == "1926",]
 
-data.frame(size[], apply(size[,c(2:50)],2, mean) )
+#data.frame(size[], apply(size[,c(2:50)],2, mean) )
 
-table(size$Year2,)
-size
-
-BE
-
-returns
+#table(size$Year2)
 ```
 
-Next, we will create composite industry variables to represent more general sectors. 
+Before using our datasets, we need to convert them from wide form to long form. Using the melt function, we alter our dataframe such that it transforms from a 89x50 dataframe to a 4361x3 dataframe. We then adjust the names of the columns, eliminate repeated columns, and repeat for our other dataframes (returns and size).
 
 ```{r}
+BE <- melt(BE, id = c("Year"))
+BE$Ind <- BE$variable
+BE$variable <- NULL
+BE$BEMERatio <- BE$value
+BE$value <- NULL
+```
+
+```{r}
+size <- melt(size, id = c("Year"))
+size$size <- size$value
+size$value <- NULL
+size$Ind <- size$variable 
+size$variable <- NULL 
+```
+
+```{r}
+returns <- melt(returns, id = c("Year"))
+returns$returns <- returns$value
+returns$value <- NULL 
+returns$Ind <- returns$variable
+size$variable <- NULL
+```
+
+Once we have transformed the dataframes into the appropriate form, we can then merge the datasets together into the final, usable dataframe. Because year and industry are repeated so many times in each of the datasets, to merge, we must create a YearInd variable that represents an industry in a unique year. After merging, we delete the repeated columns and rename the remaining ones. 
+
+```{r}
+size$YearInd <- paste(size$Year, size$Ind, sep = "_")
+BE$YearInd <- paste(BE$Year, BE$Ind, sep = "_")
+returns$YearInd <- paste(returns$Year, BE$Ind, sep = "_")
+df <- merge(size, BE, by = "YearInd")
+df <- merge(df, returns, by = "YearInd")
+df$YearInd <- NULL
+df$Year.y <- NULL 
+df$Ind.y <- NULL 
+df$variable <- NULL
+df$Year <- NULL
+df$Ind.x <- NULL
+names(df)[1] <- "Year"
+```
 
 
-
+To expand our realm of analysis, we have decided to create a number of variables: composite industry (categorical), Beta (continuous), and... Below is the series of code used to create our new variables. We begin with our composite industry variable which recodes our 49 independent industries into eight overarching industries (Healthcare, Industrials, TMT, Financials, Consumer, Utilities, Commodities, and Other).
+```{r}
+df$CompInd <- recode(df$Ind, "'Hlth' = 'Healthcare'; 'MedEq' = 'Healthcare'; 'Drugs' = 'Healthcare'; 'Chems' = 'Healthcare'; 'LabEq' = 'Healthcare'; 'Rubbr' = 'Industrials'; 'BldMt' = 'Industrials'; 'Cnstr' = 'Industrials'; 'Mach' = 'Industrials'; 'ElcEq' = 'Industrials'; 'Autos' = 'Industrials'; 'Aero' = 'Industrials'; 'Ships' = 'Industrials'; 'Mines' = 'Industrials'; 'FabPr' = 'Industrials'; 'Fun' = 'TMT'; 'Telcm' = 'TMT'; 'PerSv' = 'TMT'; 'BusSv' = 'TMT'; 'Softw' = 'TMT'; 'Chips' = 'TMT'; 'Paper' = 'TMT';'Hardw' = 'TMT'; 'Banks' = 'Financials'; 'Insur' = 'Financials'; 'RlEst' = 'Financials'; 'Fin' = 'Financials'; 'Food' = 'Consumer'; 'Soda' = 'Consumer'; 'Beer' = 'Consumer'; 'Smoke' = 'Consumer'; 'Books' = 'Consumer'; 'Clths' = 'Consumer'; 'Hshld' = 'Consumer'; 'Meals' = 'Consumer'; 'Rtail' = 'Consumer'; 'Util' = 'Utilities'; 'Gold' = 'Commodities'; 'Coal' = 'Commodities'; 'Oil' = 'Commodities'; 'Steel' = 'Commodities'; 'Txtls' = 'Commodities'; 'Other' = 'Other'; 'Trans' = 'Other'; 'Boxes' = 'Other'; 'Guns' = 'Other'; 'Whlsl' = 'Other'; 'Agric' = 'Other'; 'Toys' = 'Other'")
 
 ```
 
-Finally, we will reformat the monthly date variables in the Returns and Size dataframes 
+Next, we create Beta for each industry, which represents the covariance of market returns and a given industry returns divided by the variance in market returns. 
+
+```{r}
+df <- merge(df, rf, by = "Year")
+df$Year <- as.factor(df$Year)
+df$Beta <- NA
+for(i in unique(df$Ind)){
+  temp <- df[df$Ind == i,]
+  a <- (cov(temp$returns,temp$mktret))/(var(temp$mktret))
+  df$Beta[df$Ind==i] <- a
+}
+```
+
+
+###Graphics 
+
+First, we examine a boxplot between firm size and composite industry to examine if there are noticeable differences in the log  size between the composite industries. We would need to use a t-test of some sort to examine whether these differences were statistically significant. We added 1 inside the log because some of the firm sizes are technically zero, which causes an error given that we are taking the natural log. 
+```{r}
+boxplot(log(df$size + 1)~df$CompInd, main = "Boxplot of Composite Industry and Size", col = c("red", "blue", "green", "yellow","orange", "magenta", "turquoise", "lime green"), ylab = "Log of Size", las = 2, cex.axis = .8) 
+```
+Overall, the industries appear to be relatively similar and there are no observable skews within any of the industries. Next, we will check if the data has a normal distribution within each composite industry.
+
+```{r}
+qqPlot(df$returns~df$CompInd)
+qqPlot(log(df$size+1)~df$CompInd) #Given that size is in dollars, we found that a log transformation would be valuable to preserving normality. 
+qqPlot(df$BEMERatio~df$CompInd)
+```
+
+Returns over time for a specific composite industry  
+```{r}
+plot(df$returns ~ df$Year, main = "Scatterplot of Year versus Average Yearly Returns", pch = 24, col = "blue", xlab = "Year", ylab = "Average Yearly Returns")
+```
+
+Histogram for BE/ME, size, or returns for the years of a particular industry. 
 ```{r}
 
 ```
+
+###Basic Tests
+
+###Permutation Test 
+
+###Multiple Regressions
+
+###ANOVA, Logit, Multinomial, or Webscraping 
+
+###Final Comments 
+
+
+
 
 
