@@ -162,18 +162,19 @@ for(i in unique(df$Ind)){
 
 Exporting to excel to make manual changes to variables. 
 ```{r, include = FALSE}
-write.csv(df, "finaldf.csv")
+#write.csv(df, "finaldf.csv")
 ```
 
+Here, we create all of the composite variables for our dataset such as Composite Industry Returns, Composite Size, and Composite BE/ME ratio. We then merge these into a new dataframe.
 ```{r}
-aggdf <- read.csv("CompInd Returns.csv")
-aggdf <- melt(aggdf, id = c("Row.Labels"))
-aggdf$CompInd <- aggdf$variable
-aggdf$variable <- NULL
-aggdf$AvgReturns <- aggdf$value
-aggdf$value <- NULL
-aggdf$Year <- aggdf$Row.Labels
-aggdf$Row.Labels <- NULL
+#aggdf <- read.csv("CompInd Returns.csv")
+#aggdf <- melt(aggdf, id = c("Row.Labels"))
+#aggdf$CompInd <- aggdf$variable
+#aggdf$variable <- NULL
+#aggdf$AvgReturns <- aggdf$value
+#aggdf$value <- NULL
+#aggdf$Year <- aggdf$Row.Labels
+#aggdf$Row.Labels <- NULL
 
 #this is how we do it within r itself instead of making a new dataset and doing it through excel
 indreturnscomp <- aggregate(df$returns ~ df$CompInd + df$Year, df, mean)
@@ -233,18 +234,18 @@ qqPlot(log(df$size+1)~df$CompInd) #Given that size is in dollars, we found that 
 qqPlot(df$BEMERatio~df$CompInd)
 ```
 
-After examining our dataset, we have decided to subset such that we keep the first 53 years.  
+After examining our dataset, we have decided to subset such that we keep the first 53 years where there is more variability within our dataset.  
 ```{r}
-aggdf <- aggdf[aggdf$Year <= 1979,]
+newdf <- newdf[newdf$Year <= 1979,]
 ```
 
-Average Returns per composite industry by Year 1926-1979
+Using our new dataframe, we first examine the average returns per composite industry by year from 1926-1979
 ```{r}
-plot(aggdf$AvgReturns ~ aggdf$Year, main = "Scatterplot of Year versus Average Yearly Returns", pch = 24, col = factor(aggdf$CompInd), xlab = "Year", ylab = "Average Yearly Returns")
+plot(newdf$indreturnscomp ~ newdf$Year, main = "Scatterplot of Year versus Average Yearly Returns", pch = 24, col = factor(newdf$CompInd), xlab = "Year", ylab = "Average Yearly Returns")
 #ADD CONNECTING LINES
 ```
 
-
+Neehar, if you want to make some more random graphs, it would be helpful
 Histogram for BE/ME, size, or returns for the years of a particular industry. 
 ```{r}
 
