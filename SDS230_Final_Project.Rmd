@@ -165,6 +165,16 @@ Exporting to excel to make manual changes to variables.
 write.csv(df, "finaldf.csv")
 ```
 
+```{r}
+aggdf <- read.csv("CompInd Returns.csv")
+aggdf <- melt(aggdf, id = c("Row.Labels"))
+aggdf$CompInd <- aggdf$variable
+aggdf$variable <- NULL
+aggdf$AvgReturns <- aggdf$value
+aggdf$value <- NULL
+aggdf$Year <- aggdf$Row.Labels
+aggdf$Row.Labels <- NULL
+```
 
 ###Graphics 
 
@@ -175,23 +185,15 @@ boxplot(log(df$size + 1)~df$CompInd, main = "Boxplot of Composite Industry and S
 Overall, the industries appear to be relatively similar and there are no observable skews within any of the industries. Next, we will check if the data has a normal distribution within each composite industry.
 
 ```{r}
+#Figure out graphical parameters
 qqPlot(df$returns~df$CompInd)
 qqPlot(log(df$size+1)~df$CompInd) #Given that size is in dollars, we found that a log transformation would be valuable to preserving normality. 
 qqPlot(df$BEMERatio~df$CompInd)
 ```
 
-
-
-
-
-
-
-
-
-
 Returns over time for a specific composite industry  
 ```{r}
-plot(df$returns ~ df$Year, main = "Scatterplot of Year versus Average Yearly Returns", pch = 24, col = "blue", xlab = "Year", ylab = "Average Yearly Returns")
+plot(aggdf$AvgReturns[aggdf$CompInd == "Commodities"] ~ aggdf$Year[aggdf$CompInd == "Commodities"], main = "Scatterplot of Year versus Average Yearly Returns", pch = 24, col = "green", xlab = "Year", ylab = "Average Yearly Returns")
 ```
 
 Histogram for BE/ME, size, or returns for the years of a particular industry. 
