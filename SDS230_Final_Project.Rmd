@@ -160,6 +160,11 @@ for(i in unique(df$Ind)){
 }
 ```
 
+Exporting to excel to make manual changes to variables. 
+```{r, include = FALSE}
+write.csv(df, "finaldf.csv")
+```
+
 
 ###Graphics 
 
@@ -174,6 +179,15 @@ qqPlot(df$returns~df$CompInd)
 qqPlot(log(df$size+1)~df$CompInd) #Given that size is in dollars, we found that a log transformation would be valuable to preserving normality. 
 qqPlot(df$BEMERatio~df$CompInd)
 ```
+
+
+
+
+
+
+
+
+
 
 Returns over time for a specific composite industry  
 ```{r}
