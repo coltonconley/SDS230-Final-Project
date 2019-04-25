@@ -175,15 +175,36 @@ aggdf$value <- NULL
 aggdf$Year <- aggdf$Row.Labels
 aggdf$Row.Labels <- NULL
 
-
 #this is how we do it within r itself instead of making a new dataset and doing it through excel
 indreturnscomp <- aggregate(df$returns ~ df$CompInd + df$Year, df, mean)
 colnames(indreturnscomp) <- c("CompInd", "Year", "Composite Returns")
-indreturnscomp
+#indreturnscomp
+aggcompret <- merge(df, indreturnscomp, all.x=T, by = c("Year", "CompInd"))
+#aggcompret
 
-newdf <- merge(df, indreturnscomp, all.x=T, by = c("Year", "CompInd"))
+#composite industry size 
+indsizecomp <- aggregate(df$size ~ df$CompInd + df$Year, df, mean)
+colnames(indsizecomp) <- c("CompInd", "Year", "Composite Size")
+#indsizecomp
+aggcompsize <- merge(aggcompret, indsizecomp, all.x=T, by = c("Year", "CompInd"))
+#aggcompsize
 
-newdf
+#composite BE/ME ratio
+indbemecomp <- aggregate(df$BEMERatio ~ df$CompInd + df$Year, df, mean)
+colnames(indbemecomp) <- c("CompInd", "Year", "Composite BE/ME Ratio")
+#indbemecomp
+aggcompbeme <- merge(aggcompsize, indbemecomp, all.x=T, by = c("Year", "CompInd"))
+#aggcompbeme
+
+
+#composite beta and final dataframe
+indbetacomp <- aggregate(df$Beta ~ df$CompInd + df$Year, df, mean)
+colnames(indbetacomp) <- c("CompInd", "Year", "Composite Beta")
+indbetacomp
+aggcompfin <- merge(aggcompbeme, indbetacomp, all.x=T, by = c("Year", "CompInd"))
+
+#final dataframe
+aggcompfin
 ```
 Now, we will add other composite variables to our aggregated dataset.
 
