@@ -22,6 +22,7 @@ library(olsrr)
 library(corrplot)
 library(leaps)
 library(car)
+library(PerformanceAnalytics)
 source("http://www.reuningscherer.net/s&ds230/Rfuncs/regJDRS.txt")
 ```
 
@@ -201,22 +202,17 @@ aggcompbeme <- merge(aggcompsize, indbemecomp, all.x=T, by = c("Year", "CompInd"
 #composite beta and final dataframe
 indbetacomp <- aggregate(df$Beta ~ df$CompInd + df$Year, df, mean)
 colnames(indbetacomp) <- c("CompInd", "Year", "Composite Beta")
-indbetacomp
+#indbetacomp
 aggcompfin <- merge(aggcompbeme, indbetacomp, all.x=T, by = c("Year", "CompInd"))
 
 #final dataframe
-aggcompfin
-```
-Now, we will add other composite variables to our aggregated dataset.
-
-```{r}
-
+#aggcompfin
 ```
 
-Merge everything together into the final dataset, aggdf. 
-
+After examining our dataset, we have decided to subset such that we keep the first 53 years where there is more variability within our dataset.  
 ```{r}
-
+aggcompfin$Year <- as.numeric(aggcompfin$Year)
+aggcompfin <- aggcompfin[aggcompfin$Year <= 53,]
 ```
 
 ###Graphics 
@@ -227,37 +223,85 @@ boxplot(log(df$size + 1)~df$CompInd, main = "Boxplot of Composite Industry and S
 ```
 Overall, the industries appear to be relatively similar and there are no observable skews within any of the industries. Next, we will check if the data has a normal distribution within each composite industry.
 
-```{r}
-#Figure out graphical parameters
-qqPlot(df$returns~df$CompInd)
-qqPlot(log(df$size+1)~df$CompInd) #Given that size is in dollars, we found that a log transformation would be valuable to preserving normality. 
-qqPlot(df$BEMERatio~df$CompInd)
-```
-
-After examining our dataset, we have decided to subset such that we keep the first 53 years where there is more variability within our dataset.  
-```{r}
-newdf <- newdf[newdf$Year <= 1979,]
-```
-
 Using our new dataframe, we first examine the average returns per composite industry by year from 1926-1979
 ```{r}
-plot(newdf$indreturnscomp ~ newdf$Year, main = "Scatterplot of Year versus Average Yearly Returns", pch = 24, col = factor(newdf$CompInd), xlab = "Year", ylab = "Average Yearly Returns")
-#ADD CONNECTING LINES
+aggcompfin$CompInd <- as.factor(aggcompfin$CompInd)
+plot(aggcompfin$`Composite Returns` ~ aggcompfin$Year, main = "Scatterplot of Year versus Average Yearly Returns 1926-1979", pch = 24, col = factor(aggcompfin$CompInd), xlab = "Year", ylab = "Average Yearly Returns")
+legend("bottomleft", col= factor(aggcompfin$CompInd), legend= levels(aggcompfin$CompInd), pch=16)
+# lines() - How do we add in lines
+```
+Overall, returns seem relatively flat throughout the entire period. Given the number of composite industries, it is difficult to see any single trend in the graph. 
+
+Next, we examine the Book Equity / Market Equity Ratio for the nine composite industries throughout the 1926-1979 period. The changes in this financial ratio will give us an idea of...
+```{r}
+plot(aggcompfin$`Composite BE/ME Ratio` ~ aggcompfin$Year, main = "BE/ME Ratio for Each Industry by Year", xlab = "Year", ylab = "Average BE/ME", col = factor(aggcompfin$CompInd))
+legend("bottomleft", col= factor(aggcompfin$CompInd), legend= levels(aggcompfin$CompInd), pch=16)
 ```
 
-Neehar, if you want to make some more random graphs, it would be helpful
-Histogram for BE/ME, size, or returns for the years of a particular industry. 
+Now, we will examine graphs within specific composite industries to observe how our continuous variables have changed throughout time. We have elected two composite industries at random (TMT and Commodities) in order to limit the number of graphs we are making. 
+```{r}
+barplot(aggcompfin$`Composite BE/ME Ratio`[aggcompfin$CompInd == "TMT"], main = "Barplot of TMT BE/ME Ratio from 1926-1979", col = "green", ylab = "Composite BE/ME for TMT")
+barplot(aggcompfin$`Composite Size`[aggcompfin$CompInd == "TMT"], main = "Barplot of TMT Size from 1926-1979", col = "green", ylab = "Composite Size for TMT")
+barplot(aggcompfin$`Composite Returns`[aggcompfin$CompInd == "TMT"], main = "Barplot of TMT Composite Returns from 1926-1979", col = "green", ylab = "Composite Average Yearly Returns for TMT")
+```
+[ANALYSIS ON TMT GRAPHS]
+
+Now, we examine the same graphs for the Commodities industry. 
+```{r}
+barplot(aggcompfin$`Composite BE/ME Ratio`[aggcompfin$CompInd == "Commodities"], main = "Barplot of Commodities BE/ME Ratio from 1926-1979", col = "green", ylab = "Composite BE/ME for Commodities")
+barplot(aggcompfin$`Composite Size`[aggcompfin$CompInd == "Commodities"], main = "Barplot of Commodities Size from 1926-1979", col = "green", ylab = "Composite Size for Commodities")
+barplot(aggcompfin$`Composite Returns`[aggcompfin$CompInd == "Commodities"], main = "Barplot of Commodities Composite Returns from 1926-1979", col = "green", ylab = "Composite Average Yearly Returns for Commodities")
+```
+[ANALYSIS ON THE COMMODITIES]
+
+
+We have also elected to examine some of the histograms for our composite variables to get a general sense of the distribution and see if any transformations may be necessary. 
+```{r}
+hist(aggcompfin$`Composite Returns`, main = "Histogram of Composite Returns", xlab = "Average Yearly Composite Returns", ylab = "Frequency", col = "blue", xlim = c(-10,10))
+
+hist(aggcompfin$`Composite BE/ME Ratio`, main = "Histogram of Composite BE/ME Ratio", xlab = "Composite BE/ME Ratio", ylab = "Frequency", col = "orange", xlim = c(0,7))
+
+hist(aggcompfin$`Composite Beta`, main = "Histogram of Composite Beta", xlab = "Composite Beta", ylab = "Frequency", col = "green", xlim = c(0.1,1))
+
+hist(aggcompfin$`Composite Size`, main = "Histogram of Composite Size", xlab = "Composite Average Size Yearly", ylab = "Frequency", col = "red")
+```
+We have created histograms of the four composite variables in our dataset. The histogram for composite returns appear relatively normally distributed. By contrast, the histogram of composite BE/ME Ratio is right skewed as is the histogram of composite returns whereas the histogram of composite beta is more left skewed. 
+
+
+Finally, we examine the normal quantile plots for our composite industries to see if we have normal distribution within each composite industry. 
+[ADD IN NORMAL QUANTILE PLOTS]
 ```{r}
 
 ```
+
 
 ###Basic Tests
 
+Because our data does not include any two-level categorical groups, we find it more useful to examine the correlations between our different continous composite variables which we made graphs for above.
+
+```{r}
+#Now we check for significant correlations at the 95% level and plot them. 
+sigcorr <- cor.mtest(aggcompfin[,c(9, 11:14)], conf.level = .95)
+corrplot.mixed(cor(aggcompfin[,c(9, 11:14)]), lower.col="black", upper = "ellipse", tl.col = "black", number.cex=.7, 
+               order = "hclust", tl.pos = "lt", tl.cex=.7, p.mat = sigcorr$p, sig.level = .05)
+```
+[COMMENTS ON THE CORRELATION]
+
+Now, let's look on non-linearity, correlation, and histograms all at once for our variables of interest. 
+```{r}
+chart.Correlation(aggcompfin[,c(9, 11:14)], histogram=TRUE, pch=19)
+```
+
+[Create bootstrap for the correlation for the strongest correlation? - ASK COLIN ABOUT THIS TOMORROW]
+
 ###Permutation Test 
 
-###Multiple Regressions
+[MAX WILL TRY TO GET TO TOMORROW]
 
+###Multiple Regressions
+[COLTON ]
 ###ANOVA, Logit, Multinomial, or Webscraping 
+ANOVA HERE instead of other methods 
 
 ###Final Comments 
 
