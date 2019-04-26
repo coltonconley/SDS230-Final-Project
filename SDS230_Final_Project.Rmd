@@ -226,8 +226,8 @@ Overall, the industries appear to be relatively similar and there are no observa
 Using our new dataframe, we first examine the average returns per composite industry by year from 1926-1979
 ```{r}
 aggcompfin$CompInd <- as.factor(aggcompfin$CompInd)
-plot(aggcompfin$`Composite Returns` ~ aggcompfin$Year, main = "Scatterplot of Year versus Average Yearly Returns 1926-1979", pch = 24, col = factor(aggcompfin$CompInd), xlab = "Year", ylab = "Average Yearly Returns")
-legend("bottomleft", col= factor(aggcompfin$CompInd), legend= levels(aggcompfin$CompInd), pch=16)
+plot(aggcompfin$`Composite Returns` ~ aggcompfin$Year, main = "Scatterplot of Year versus Average Yearly Returns 1926-1979", pch = 24, col = aggcompfin$CompInd, xlab = "Year", ylab = "Average Yearly Returns")
+legend("bottom", legend= levels(aggcompfin$CompInd), pch=16, cex = 0.6, col = c(1:9))
 # lines() - How do we add in lines
 ```
 Overall, returns seem relatively flat throughout the entire period. Given the number of composite industries, it is difficult to see any single trend in the graph. 
@@ -235,22 +235,40 @@ Overall, returns seem relatively flat throughout the entire period. Given the nu
 Next, we examine the Book Equity / Market Equity Ratio for the nine composite industries throughout the 1926-1979 period. The changes in this financial ratio will give us an idea of...
 ```{r}
 plot(aggcompfin$`Composite BE/ME Ratio` ~ aggcompfin$Year, main = "BE/ME Ratio for Each Industry by Year", xlab = "Year", ylab = "Average BE/ME", col = factor(aggcompfin$CompInd))
-legend("bottomleft", col= factor(aggcompfin$CompInd), legend= levels(aggcompfin$CompInd), pch=16)
+legend("topright", col= c(1:9), legend= levels(aggcompfin$CompInd), pch=16, cex = 0.6)
 ```
 
 Now, we will examine graphs within specific composite industries to observe how our continuous variables have changed throughout time. We have elected two composite industries at random (TMT and Commodities) in order to limit the number of graphs we are making. 
 ```{r}
-barplot(aggcompfin$`Composite BE/ME Ratio`[aggcompfin$CompInd == "TMT"], main = "Barplot of TMT BE/ME Ratio from 1926-1979", col = "green", ylab = "Composite BE/ME for TMT")
-barplot(aggcompfin$`Composite Size`[aggcompfin$CompInd == "TMT"], main = "Barplot of TMT Size from 1926-1979", col = "green", ylab = "Composite Size for TMT")
-barplot(aggcompfin$`Composite Returns`[aggcompfin$CompInd == "TMT"], main = "Barplot of TMT Composite Returns from 1926-1979", col = "green", ylab = "Composite Average Yearly Returns for TMT")
+#Making a new dataframe that has one value per composite industry
+single <- data.frame(Year = c(1:53), Composite_Returns_TMT = NA, Composite_Size_TMT = NA, Composite_BEME_Ratio_TMT = NA, Composite_Beta_TMT = NA, Composite_Returns_Com = NA, Composite_Size_Com = NA, Composite_BEME_Ratio_Com = NA, Composite_Beta_Com = NA)
+for(i in 1:length(unique(aggcompfin$Year))){
+  temp1 <- aggcompfin[aggcompfin$Year == i,]
+  a <- tapply(temp1$`Composite Size`, temp1$CompInd, mean)
+  single$Composite_Size_TMT[i] <- a[8]
+  b <- tapply(temp1$`Composite Returns`, temp1$CompInd, mean)
+  single$Composite_Returns_TMT[i] <- b[8]
+  c <- tapply(temp1$`Composite BE/ME Ratio`, temp1$CompInd, mean)
+  single$Composite_BEME_Ratio_TMT[i] <- c[8]
+  d <- tapply(temp1$`Composite Beta`, temp1$CompInd, mean)
+  single$Composite_Beta_TMT[i] <- d[8]
+  single$Composite_Size_Com[i] <- a[1]
+  single$Composite_Returns_Com[i] <- b[1]
+  single$Composite_BEME_Ratio_Com[i] <- c[1]
+  single$Composite_Beta_Com[i] <- d[1]
+}
+
+barplot(single$Composite_BEME_Ratio_TMT, main = "Barplot of TMT BE/ME Ratio from 1926-1979", col = "blue", ylab = "Composite BE/ME for TMT")
+barplot(single$Composite_Returns_TMT, main = "Barplot of TMT Average Yearly Returns from 1926-1979", col = "green", ylab = "Composite Returns for TMT")
+barplot(single$Composite_Size_TMT, main = "Barplot of TMT Composite Size from 1926-1979", col = "green", ylab = "Composite Average Size for TMT")
 ```
 [ANALYSIS ON TMT GRAPHS]
 
 Now, we examine the same graphs for the Commodities industry. 
 ```{r}
-barplot(aggcompfin$`Composite BE/ME Ratio`[aggcompfin$CompInd == "Commodities"], main = "Barplot of Commodities BE/ME Ratio from 1926-1979", col = "green", ylab = "Composite BE/ME for Commodities")
-barplot(aggcompfin$`Composite Size`[aggcompfin$CompInd == "Commodities"], main = "Barplot of Commodities Size from 1926-1979", col = "green", ylab = "Composite Size for Commodities")
-barplot(aggcompfin$`Composite Returns`[aggcompfin$CompInd == "Commodities"], main = "Barplot of Commodities Composite Returns from 1926-1979", col = "green", ylab = "Composite Average Yearly Returns for Commodities")
+barplot(single$Composite_BEME_Ratio_Com, main = "Barplot of Commodities BE/ME Ratio from 1926-1979", col = "green", ylab = "Composite BE/ME for Commodities")
+barplot(single$Composite_Size_Com, main = "Barplot of Commodities Size from 1926-1979", col = "green", ylab = "Composite Size for Commodities")
+barplot(single$Composite_Returns_Com, main = "Barplot of Commodities Composite Returns from 1926-1979", col = "green", ylab = "Composite Average Yearly Returns for Commodities")
 ```
 [ANALYSIS ON THE COMMODITIES]
 
@@ -267,17 +285,32 @@ hist(aggcompfin$`Composite Size`, main = "Histogram of Composite Size", xlab = "
 ```
 We have created histograms of the four composite variables in our dataset. The histogram for composite returns appear relatively normally distributed. By contrast, the histogram of composite BE/ME Ratio is right skewed as is the histogram of composite returns whereas the histogram of composite beta is more left skewed. 
 
-
 Finally, we examine the normal quantile plots for our composite industries to see if we have normal distribution within each composite industry. 
-[ADD IN NORMAL QUANTILE PLOTS]
 ```{r}
-
+qqPlot(aggcompfin$`Composite Returns`~aggcompfin$CompInd)
+qqPlot(aggcompfin$`Composite Size`~aggcompfin$CompInd)
+qqPlot(aggcompfin$`Composite BE/ME Ratio` ~ aggcompfin$CompInd)
+qqPlot(aggcompfin$`Composite Beta`~ aggcompfin$CompInd)
 ```
-
+[Write analysis and fix graph titles]
 
 ###Basic Tests
 
-Because our data does not include any two-level categorical groups, we find it more useful to examine the correlations between our different continous composite variables which we made graphs for above.
+Because our data does not include any two-level categorical groups, we find it more useful to examine the correlations between our different continous composite variables which we made graphs for above. However, since our new dataframe only has two industries, we can use a basic t-test to compare the four composite variables. 
+```{r}
+#Basic boxplots to get an inclination of the differences 
+boxplot(single$Composite_Returns_TMT, single$Composite_Returns_Com, ylab = "Composite Returns", main = "Average Yearly Composite Returns (TMT vs Commodities)", col = "green", names = c("TMT", "Commodities"))
+boxplot(single$Composite_Size_TMT, single$Composite_Size_Com, ylab = "Composite Size", main = "Average Yearly Composite Size (TMT vs Commodities)", col = "red", names = c("TMT", "Commodities"))
+boxplot(single$Composite_BEME_Ratio_TMT, single$Composite_BEME_Ratio_Com, ylab = "Composite BE/ME Ratio", main = "Composite BE/ME Ratio (TMT vs Commodities)", col = "blue", names = c("TMT", "Commodities"))
+boxplot(single$Composite_Beta_TMT, single$Composite_Beta_Com, ylab = "Composite Beta", main = "Composite Beta (TMT vs Commodities)", col = "orange", names = c("TMT", "Commodities"))
+
+t.test(single$Composite_Returns_TMT, single$Composite_Returns_Com)
+t.test(single$Composite_Size_TMT, single$Composite_Size_Com)
+t.test(single$Composite_BEME_Ratio_TMT, single$Composite_BEME_Ratio_Com)
+t.test(single$Composite_Beta_TMT, single$Composite_Beta_Com)
+```
+[ANALYSIS]
+
 
 ```{r}
 #Now we check for significant correlations at the 95% level and plot them. 
@@ -291,17 +324,21 @@ Now, let's look on non-linearity, correlation, and histograms all at once for ou
 ```{r}
 chart.Correlation(aggcompfin[,c(9, 11:14)], histogram=TRUE, pch=19)
 ```
+[Make some comments]
 
-[Create bootstrap for the correlation for the strongest correlation? - ASK COLIN ABOUT THIS TOMORROW]
+[Create bootstrap for the correlation for the strongest correlation? - homework 5]
+
+TUKEY COMPARISON FOR SIGNIFICANT COMPARISONS - use the old dataframe and subset for composite columns [Homework 7]
 
 ###Permutation Test 
 
-[MAX WILL TRY TO GET TO TOMORROW]
+Do it for a different correlation than above 
 
 ###Multiple Regressions
-[COLTON ]
+[COLTON]
+
 ###ANOVA, Logit, Multinomial, or Webscraping 
-ANOVA HERE instead of other methods 
+ANOVA HERE instead of other methods - for composite industry
 
 ###Final Comments 
 
