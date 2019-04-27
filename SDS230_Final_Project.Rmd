@@ -236,6 +236,7 @@ Next, we examine the Book Equity / Market Equity Ratio for the nine composite in
 ```{r}
 plot(aggcompfin$`Composite BE/ME Ratio` ~ aggcompfin$Year, main = "BE/ME Ratio for Each Industry by Year", xlab = "Year", ylab = "Average BE/ME", col = factor(aggcompfin$CompInd))
 legend("topright", col= c(1:9), legend= levels(aggcompfin$CompInd), pch=16, cex = 0.6)
+#Add in the lines
 ```
 
 Now, we will examine graphs within specific composite industries to observe how our continuous variables have changed throughout time. We have elected two composite industries at random (TMT and Commodities) in order to limit the number of graphs we are making. 
@@ -307,38 +308,151 @@ boxplot(single$Composite_Beta_TMT, single$Composite_Beta_Com, ylab = "Composite 
 t.test(single$Composite_Returns_TMT, single$Composite_Returns_Com)
 t.test(single$Composite_Size_TMT, single$Composite_Size_Com)
 t.test(single$Composite_BEME_Ratio_TMT, single$Composite_BEME_Ratio_Com)
-t.test(single$Composite_Beta_TMT, single$Composite_Beta_Com)
+# t.test(single$Composite_Beta_TMT, single$Composite_Beta_Com) - Does not work because data is essentially constant. Based on the boxplot, the Betas do appear to be different between the industries. 
 ```
-[ANALYSIS]
+Based on the t-test, Composite Returns between TMT and Commodities are not statistically significantly different at any reasonable level of alpha. By contrast, size for the two industries is statistically significant at very low levels of alpha as the p-value is 0.0035. Based on the boxplot, it appears that TMT is larger than commodities for size. Finally, the BE/ME Ratio between the two industries is statistically significantly different at the 0.05 alpha level as the p-value is 0.008464. Based on the boxplot, the BE/ME Ratio for Commodities is larger than TMT. 
 
 
 ```{r}
 #Now we check for significant correlations at the 95% level and plot them. 
 sigcorr <- cor.mtest(aggcompfin[,c(9, 11:14)], conf.level = .95)
 corrplot.mixed(cor(aggcompfin[,c(9, 11:14)]), lower.col="black", upper = "ellipse", tl.col = "black", number.cex=.7, 
-               order = "hclust", tl.pos = "lt", tl.cex=.7, p.mat = sigcorr$p, sig.level = .05)
+               order = "hclust", tl.pos = "lt", tl.cex=.7, p.mat = sigcorr$p, sig.level = .05) #Adjust the top axis text
 ```
-[COMMENTS ON THE CORRELATION]
+Overall, the correlations between variables are relatively low. The highest correlation is between market return and composite returns for all of the industries. Composite Beta and Composite BE/ME ratio both have a low negative correlation with composite size, but the correlation is statistically significant at the 95% level. Other than these several correlations, the others are too low to hold much interpretation. We will proceed by analyzing these three correlations through bootstraps and permutation tests. 
 
-Now, let's look on non-linearity, correlation, and histograms all at once for our variables of interest. 
+Briefly, let's look on non-linearity, correlation, and histograms all at once for our variables of interest. 
 ```{r}
 chart.Correlation(aggcompfin[,c(9, 11:14)], histogram=TRUE, pch=19)
 ```
-[Make some comments]
+The graph does not provide much more information. Although we see that the correlation between composite returns and market return is quite linear, which explains the strong correlation. [ADD MORE HERE]. 
 
-[Create bootstrap for the correlation for the strongest correlation? - homework 5]
+Now, we proceed to construct a bootstrapped correlation interval for the correlation between market return and composite industry return. 
+```{r}
 
-TUKEY COMPARISON FOR SIGNIFICANT COMPARISONS - use the old dataframe and subset for composite columns [Homework 7]
+```
 
 ###Permutation Test 
+```{r}
+myCor <- function(x,y){
+  plot(x,y,pch=19, col="red", xlab = "Composite Beta", ylab = "Composite Size")
+  mtext(paste("Sample Correlation =", round(cor(x,y),3)), cex=1.2)
+}
 
-Do it for a different correlation than above 
+permCor <- function(x, y, n_samp = 10000, plot = T){
+   corResults <- rep(NA, n_samp)
+   for (i in 1:n_samp){
+      corResults[i] <- cor(x, sample(y))
+   }
+   pval <- mean(abs(corResults) >= abs(cor(x,y)))
+   if (plot == T){
+      #Make histogram of permuted correlations
+      hist(corResults, col = "yellow", main = "", xlab = "Correlations", breaks = 50,
+           xlim = range(corResults,cor(x,y)))
+      mtext("Permuted Sample Correlations", cex = 1.2, line = 1)
+      mtext(paste("Permuted P-value =",round(pval,5)), cex = 1, line = 0)
+      abline(v = cor(x,y), col="blue", lwd=3)
+      text(cor(x,y)*.97, 0,paste("Actual Correlation =", round(cor(x,y),2)),srt = 90, adj = 0)
+   }
+   if (plot == F){
+      return(round(pval,5))
+   }  
+}
+
+myCor(aggcompfin$`Composite Beta`, aggcompfin$`Composite Size`)
+permCor(aggcompfin$`Composite Beta`, aggcompfin$`Composite Size`, n_samp = 10000, plot = T)
+```
+Based on the permuted sample correlations, the actual correlation between composite beta and composite size appears to be significant at any reasonable level of alpha. 
 
 ###Multiple Regressions
 [COLTON]
 
 ###ANOVA, Logit, Multinomial, or Webscraping 
-ANOVA HERE instead of other methods - for composite industry
+For this portion of the project, we will use ANOVA to examine the differences of composite industry over composite size. We are curious about the pairs of differences for Composite Industry with regards to the Composite Size variable. Thus, our ANOVA will focus on the composite size variable, although we may choose another one for some 
+
+Earlier, we examined the boxplot of composite industry by size and it appeared that the boxplots were relatively even. We start by examing the sample standard deviations across composite industries to see if we pass our assumptions for ANOVA (ie. the max to min ratio of standard deviations is less than 2)
+```{r}
+print("SD by Genre")
+(sds <- tapply(aggcompfin$`Composite Size`, aggcompfin$CompInd, sd))
+
+print("Ratio of Max/Min Sample SD")
+round(max(sds)/min(sds),1)
+```
+The ratio is 3.5. Thus, our assumption for ANOVA is not satisfied. We will continue with the ANOVA analysis, but we will also use non-parametric tests to see if the variances are the same across composite industries. Specifically, we believe it best to use the Kruskal-Wallace test as it makes no assumptions of normality within each group or that the variances be equal (have a ratio less than 2). We examined our normal quantile plots before, and saw that the data was relatively normally distributed, but not for all genres. Thus, Welch's ANOVA is not a solid choice in this scenario. 
+
+
+We begin with ANOVA:
+```{r}
+aov1 <- aov(aggcompfin$`Composite Size` ~ aggcompfin$CompInd)
+summary(aov1)
+
+#We use Tukey comparisons to see differences in the mean size between composite industries
+TukeyHSD(aov1)
+par(mar=c(5,11,4,1))
+plot(TukeyHSD(aov1), las=1)
+
+#Finally, we examine our residuals for the ANOVA model
+myResPlots2(aov1, label = "Size Composite Industry")
+```
+*Analysis:* Our anova model shows that the mean composite size is statistically significantly different between composite industries given that the p-value is smaller than any reasonable value of alpha. The degrees of freedom reported by the test are what we expect - k (# of groups) - 1 degrees of freedom for composite industries. Moreover, the degrees of freedom for the residuals are what we expect: the number of observations - the number of groups. Examining the normal quantile plot we see that our errors are not normally distributed and the fits vs studentized residuals plot shows evidence of heteroskedasticity.
+[ADD IN ANALYSIS OF THE TUKEY COMPARISONS]
+
+
+```{r}
+#Now, let's see what transformation is suggested
+trans1 <- boxCox(aov1)
+trans1$x[which.max(trans1$y)]
+
+#The suggested transformation is a log. Let's see what happens to our ANOVA model if we use the transformation. The transformation makes sense given that size is on a dollar scale.
+transsize <- log(aggcompfin$`Composite Size`)
+
+print("SD by Genre")
+(sds <- tapply(transsize, aggcompfin$CompInd, sd))
+
+print("Ratio of Max/Min Sample SD")
+round(max(sds)/min(sds),1)
+
+#Now the ratio is less than 2 and our assumption for ANOVA is satisfied. We will poroceed with the transformed model
+aov2 <- aov(transsize ~ aggcompfin$CompInd)
+summary(aov2)
+```
+*Analysis:*Our second model, using our transformed model in which we took the log of size, still shows statistically significant differences between composite industries given that the p-value is lower than any reasonable alpha. 
+
+
+```{r}
+#pairwise.t.test(transsize, aggcompfin$CompInd) 
+
+#Fix the labels on the side
+TukeyHSD(aov2)
+par(mar=c(5,11,4,1))
+plot(TukeyHSD(aov2), las=1)
+
+
+myResPlots2(aov2, label = "Size Composite Industry")
+```
+*Analysis:* [ADD IN ANALYSIS OF THE TUKEY COMPARISONS]
+The errors of our new ANOVA model still do not appear normally distributed, but the fits vs residuals plot shows less evidence of heteroskedasticity. 
+
+Before we continue with our non-parametric tests, we will use Bartlett's and Levene's test to see if variances are the equal. 
+```{r}
+bartlett.test(transsize, aggcompfin$CompInd)
+```
+*Analysis:* Based on Bartlett's test, we reject the null-hypothesis that variances are homogeneous, a result which could be due to non-normality given that Bartlett test assumes that the data is drawn from a normal distribution (and transsize, as seen above, is not normal).
+
+```{r}
+leveneTest(transsize, aggcompfin$CompInd)
+```
+*Analysis:* Once again, the F-value is very high and the p-value is much lower than any reasonable alpha meaning we reject the null hypothesis that the variances are homogenous (Levene's test makes no assumptions about normality which means its more appropriate for analyzing pctreturn). 
+
+Based on the results of Bartlett's test, we find it best to use Kruskal's test as our non-parametric test as it makes no assumptions of normality or equality of variances. Now, we proceed with our non-parametric tests.
+```{r}
+#Now, with Kruskal's test
+kruskal.test(transsize ~ aggcompfin$CompInd)
+
+#Comparing to One-Way ANOVA
+summary.aov(aov(transsize ~ aggcompfin$CompInd))
+```
+*Analysis:*The chi-squared value for the Kruskal-Wallis test is high and the p-value is small enough to reject the null hypothesis at any reasonable level of alpha meaning that at least one group median is different from others. As stated earlier, The Kurskal-Wallis test is a good choice here given that the results are statistically significant and our original data is not normally distributed within each genre and the variances are not the same between groups (based on the results from Levene and Bartlette tests). 
 
 ###Final Comments 
 
