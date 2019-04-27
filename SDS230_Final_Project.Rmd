@@ -327,12 +327,13 @@ chart.Correlation(aggcompfin[,c(9, 11:14)], histogram=TRUE, pch=19)
 ```
 The graph does not provide much more information. Although we see that the correlation between composite returns and market return is quite linear, which explains the strong correlation. [ADD MORE HERE]. 
 
-Now, we proceed to construct a bootstrapped correlation interval for the correlation between market return and composite industry return. 
+Now, we proceed to construct a bootstrapped correlation interval for the correlation between market return and composite industry return. [ASK ABOUT THIS PART]
 ```{r}
 
 ```
 
 ###Permutation Test 
+We now conduct a permutation test between composite beta and composite size in order to show a non-zero statistically significant correlation between these two variables. [ASK ABOUT NORMAL DISTRIBUTION OUTLIERS ETC]
 ```{r}
 myCor <- function(x,y){
   plot(x,y,pch=19, col="red", xlab = "Composite Beta", ylab = "Composite Size")
@@ -370,7 +371,8 @@ Based on the permuted sample correlations, the actual correlation between compos
 ###ANOVA, Logit, Multinomial, or Webscraping 
 For this portion of the project, we will use ANOVA to examine the differences of composite industry over composite size. We are curious about the pairs of differences for Composite Industry with regards to the Composite Size variable. Thus, our ANOVA will focus on the composite size variable, although we may choose another one for some 
 
-Earlier, we examined the boxplot of composite industry by size and it appeared that the boxplots were relatively even. We start by examing the sample standard deviations across composite industries to see if we pass our assumptions for ANOVA (ie. the max to min ratio of standard deviations is less than 2)
+Earlier, we examined the boxplot of composite industry by size and it appeared that the boxplots were relatively even. We start by examing the sample standard deviations across composite industries to see if we pass our assumptions for ANOVA (ie. the max to min ratio of standard deviations is less than 2).
+
 ```{r}
 print("SD by Genre")
 (sds <- tapply(aggcompfin$`Composite Size`, aggcompfin$CompInd, sd))
@@ -395,6 +397,7 @@ plot(TukeyHSD(aov1), las=1)
 myResPlots2(aov1, label = "Size Composite Industry")
 ```
 *Analysis:* Our anova model shows that the mean composite size is statistically significantly different between composite industries given that the p-value is smaller than any reasonable value of alpha. The degrees of freedom reported by the test are what we expect - k (# of groups) - 1 degrees of freedom for composite industries. Moreover, the degrees of freedom for the residuals are what we expect: the number of observations - the number of groups. Examining the normal quantile plot we see that our errors are not normally distributed and the fits vs studentized residuals plot shows evidence of heteroskedasticity.
+
 [ADD IN ANALYSIS OF THE TUKEY COMPARISONS]
 
 
