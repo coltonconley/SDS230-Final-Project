@@ -8,9 +8,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ###Introduction 
-This project will examine data from Fama & French 1992 which provides information on the average firm size, monthly return, and beta (?) for 49 different industries. The questions of the project are two-fold: First, we wsih to examine how significant is each variable in predicting returns according to CAPM. Second, we wish to see if there is a difference between CAPM predictions and the actual data through various statistical comparisons including t-tests and permutation tests. 
+This project will examine data from Fama & French 1992 which provides information on the average firm size, monthly return, and beta for 49 different industries. The questions of the project are two-fold: First, we wish to examine how significant is each variable in predicting returns according to CAPM. Second, we wish to see if there is a difference between CAPM predictions and the actual data through various statistical comparisons including t-tests and permutation tests. 
 
-The purpose of this project will be to examine the hypothesis of the Capital Asset Pricing Model (CAPM) which suggests that alpha (define) can not be generated in a given portfolio or industry. 
+The purpose of this project will be to examine the hypothesis of the Capital Asset Pricing Model (CAPM) which suggests that alpha (define) can not be generated in a given portfolio or industry. [ADD MORE AND MAKE BETTER]
 
 ```{r, include = FALSE}
 library(reshape)
@@ -43,9 +43,13 @@ The variables we plan to use and create in this dataset are:
 * Book Equity / Market Equity - 
 * Market Return - Defined as "The return on the overall theoretical market portfolio which includes all assets and having the portfolio weighted for value."
 * Risk Free Rate - Defined as "the rate of return a hypothetical investment with no risk of financial loss"
-* Beta - Defined as "a measure of a stock's volatility in relation to the market" The formula for Beta is [Insert covariance formula here]
+* Beta - Defined as "a measure of a stock's volatility in relation to the market" The formula for Beta is [Insert Beta formula here using LaTex]
+* Composite Returns 
+* Composite BE/ME Ratio
+* Composite Beta
+* Composte Size 
 
-
+[ADD FINAL SMALL CONCLUSION HERE ABOUT THE DIFFICULTIES OF WORKING WITH OUR DATA, ETC]
 ###Data Cleaning
 
 First, across all datasets, when an observation has a firm size, percent return, or beta ratio of zero, the dataset reads -99.99. We will begin by transforming all of these values to zero. 
@@ -76,26 +80,6 @@ rf$mktret <- rf$Mkt.RF+rf$RF #This creates the column for market return - done b
 BE <- BE[1:89,]
 size <- size[1:89,]
 rf <- rf[1:89,]
-
-# separate year from month in "size" dataframe
-#size$Year2 <- substr(size$Year, 1, 4)
-#size$Month <- substr(size$Year, 5, 6)
-
-# separate year from month in "returns" dataframe
-#returns$Year2 <- substr(size$Year, 1, 4)
-#returns$Month <- substr(size$Year, 5, 6)
-
-# make an average by year for "size" dataframe
-
-#table(size[size$Year2 == "1926",])
-
-
-#apply(size[size$Year2 == "1926",], 2, mean)
-#size[size$Year2 == "1926",]
-
-#data.frame(size[], apply(size[,c(2:50)],2, mean) )
-
-#table(size$Year2)
 ```
 
 Before using our datasets, we need to convert them from wide form to long form. Using the melt function, we alter our dataframe such that it transforms from a 89x50 dataframe to a 4361x3 dataframe. We then adjust the names of the columns, eliminate repeated columns, and repeat for our other dataframes (returns and size).
@@ -168,16 +152,8 @@ Exporting to excel to make manual changes to variables.
 
 Here, we create all of the composite variables for our dataset such as Composite Industry Returns, Composite Size, and Composite BE/ME ratio. We then merge these into a new dataframe.
 ```{r}
-#aggdf <- read.csv("CompInd Returns.csv")
-#aggdf <- melt(aggdf, id = c("Row.Labels"))
-#aggdf$CompInd <- aggdf$variable
-#aggdf$variable <- NULL
-#aggdf$AvgReturns <- aggdf$value
-#aggdf$value <- NULL
-#aggdf$Year <- aggdf$Row.Labels
-#aggdf$Row.Labels <- NULL
 
-#this is how we do it within r itself instead of making a new dataset and doing it through excel
+
 indreturnscomp <- aggregate(df$returns ~ df$CompInd + df$Year, df, mean)
 colnames(indreturnscomp) <- c("CompInd", "Year", "Composite Returns")
 #indreturnscomp
@@ -221,16 +197,16 @@ First, we examine a boxplot between firm size and composite industry to examine 
 ```{r}
 boxplot(log(df$size + 1)~df$CompInd, main = "Boxplot of Composite Industry and Size", col = c("red", "blue", "green", "yellow","orange", "magenta", "turquoise", "lime green"), ylab = "Log of Size", las = 2, cex.axis = .8) 
 ```
-Overall, the industries appear to be relatively similar and there are no observable skews within any of the industries. Next, we will check if the data has a normal distribution within each composite industry.
+Overall, the industries appear to be relatively similar and there are no observable skews within any of the industries. Next, we will check if the data has a normal distribution within each composite industry. [ADD MORE ANALYSIS?]
 
-Using our new dataframe, we first examine the average returns per composite industry by year from 1926-1979
+Using our new dataframe, we first examine the average returns per composite industry by year from 1926-1979.
 ```{r}
 aggcompfin$CompInd <- as.factor(aggcompfin$CompInd)
 plot(aggcompfin$`Composite Returns` ~ aggcompfin$Year, main = "Scatterplot of Year versus Average Yearly Returns 1926-1979", pch = 24, col = aggcompfin$CompInd, xlab = "Year", ylab = "Average Yearly Returns")
 legend("bottom", legend= levels(aggcompfin$CompInd), pch=16, cex = 0.6, col = c(1:9))
 # lines() - How do we add in lines
 ```
-Overall, returns seem relatively flat throughout the entire period. Given the number of composite industries, it is difficult to see any single trend in the graph. 
+Overall, returns seem relatively flat throughout the entire period. Given the number of composite industries, it is difficult to see any single trend in the graph. [ADD MORE ANALYSIS?]
 
 Next, we examine the Book Equity / Market Equity Ratio for the nine composite industries throughout the 1926-1979 period. The changes in this financial ratio will give us an idea of...
 ```{r}
@@ -238,6 +214,7 @@ plot(aggcompfin$`Composite BE/ME Ratio` ~ aggcompfin$Year, main = "BE/ME Ratio f
 legend("topright", col= c(1:9), legend= levels(aggcompfin$CompInd), pch=16, cex = 0.6)
 #Add in the lines
 ```
+[ADD IN ANALYSIS]
 
 Now, we will examine graphs within specific composite industries to observe how our continuous variables have changed throughout time. We have elected two composite industries at random (TMT and Commodities) in order to limit the number of graphs we are making. 
 ```{r}
