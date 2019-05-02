@@ -22,7 +22,7 @@ library(olsrr)
 library(corrplot)
 library(leaps)
 library(car)
-library(PerformanceAnalytics)
+#library(PerformanceAnalytics)
 source("http://www.reuningscherer.net/s&ds230/Rfuncs/regJDRS.txt")
 ```
 
@@ -57,29 +57,45 @@ First, across all datasets, when an observation has a firm size, percent return,
 #BE <- BE[complete.cases(BE),]
 #size <- size[complete.cases(size),]
 #returns <- returns[complete.cases(returns),]
-BE[BE== -99.99] <- 0 
-size[size == -99.99] <- 0 
-returns[returns == -99.99] <- 0 
-rf[rf == -99.99] <- 0
+BE[BE== -99.99] <- NA
+size[size == -99.99] <- NA 
+returns[returns == -99.99] <- NA 
+rf[rf == -99.99] <- NA
 
 ```
 
 Next, we will reformat the year variable to include only the year as oppossed to year-month while finding the yearly averages for the "returns" and "size" dataframes. We also decided to cut off the last year in the our  date variables in the Returns and Size dataframes. We will also find yearly averages for the returns and size dataframes to standardize all the dataframes of them by year.
 ```{r}
 size$Year <- substr(size$Year, 1, 4) #Strip off all ofthe month values 
-size <- aggregate(.~Year, data = size, mean)
+size <- aggregate(.~Year, data = size, mean,  na.action = na.pass)
 
+total_return <- function(returns_array){
+  final_return <- 1
+  for (individual_return in returns_array){
+    if (!is.na(individual_return) && !is.na(final_return)){
+      final_return <- final_return*(1+individual_return/100)
+    }
+    else{
+      final_return <- NA
+    }
+  }
+  if (!is.na(final_return)){
+    final_return <- final_return - 1
+  }
+  return(final_return)
+}
+returns
 returns$Year <- substr(returns$Year, 1, 4) #Ask what is going on here
-returns <- aggregate(.~Year, data = returns, mean)
-
+returns <- aggregate(.~Year, data = returns, total_return, na.action = na.pass)
 rf$Year <- substr(rf$Year,1,4)
-rf <- aggregate(.~Year, data= rf, mean)
+rf <- aggregate(.~Year, data= rf, total_return,  na.action = na.pass)
 rf$mktret <- rf$Mkt.RF+rf$RF #This creates the column for market return - done by adding back the risk free rate to the risk free market return
 
 #Kick off the last row so that we have same sized datasets. 
 BE <- BE[1:89,]
 size <- size[1:89,]
 rf <- rf[1:89,]
+
 ```
 
 Before using our datasets, we need to convert them from wide form to long form. Using the melt function, we alter our dataframe such that it transforms from a 89x50 dataframe to a 4361x3 dataframe. We then adjust the names of the columns, eliminate repeated columns, and repeat for our other dataframes (returns and size).
@@ -114,6 +130,7 @@ Once we have transformed the dataframes into the appropriate form, we can then m
 size$YearInd <- paste(size$Year, size$Ind, sep = "_")
 BE$YearInd <- paste(BE$Year, BE$Ind, sep = "_")
 returns$YearInd <- paste(returns$Year, BE$Ind, sep = "_")
+
 df <- merge(size, BE, by = "YearInd")
 df <- merge(df, returns, by = "YearInd")
 df$YearInd <- NULL
@@ -143,6 +160,8 @@ for(i in unique(df$Ind)){
   a <- (cov(temp$returns,temp$mktret))/(var(temp$mktret))
   df$Beta[df$Ind==i] <- a
 }
+
+
 ```
 
 Exporting to excel to make manual changes to variables. 
@@ -202,7 +221,7 @@ Overall, the industries appear to be relatively similar and there are no observa
 Using our new dataframe, we first examine the average returns per composite industry by year from 1926-1979.
 ```{r}
 aggcompfin$CompInd <- as.factor(aggcompfin$CompInd)
-plot(aggcompfin$`Composite Returns` ~ aggcompfin$Year, main = "Scatterplot of Year versus Average Yearly Returns 1926-1979", pch = 24, col = aggcompfin$CompInd, xlab = "Year", ylab = "Average Yearly Returns")
+plot(aggcompfin$`Composite Returns` ~ aggcompfin$Year, main = "Scatterplot of Year versus Return 1926-1979", pch = 24, col = aggcompfin$CompInd, xlab = "Year", ylab = "Yearly Returns")
 legend("bottom", legend= levels(aggcompfin$CompInd), pch=16, cex = 0.6, col = c(1:9))
 # lines() - How do we add in lines
 ```
@@ -253,7 +272,7 @@ barplot(single$Composite_Returns_Com, main = "Barplot of Commodities Composite R
 
 We have also elected to examine some of the histograms for our composite variables to get a general sense of the distribution and see if any transformations may be necessary. 
 ```{r}
-hist(aggcompfin$`Composite Returns`, main = "Histogram of Composite Returns", xlab = "Average Yearly Composite Returns", ylab = "Frequency", col = "blue", xlim = c(-10,10))
+hist(aggcompfin$`Composite Returns`, main = "Histogram of Composite Returns", xlab = "Average Yearly Composite Returns", ylab = "Frequency", col = "blue", xlim = c(-2,2))
 
 hist(aggcompfin$`Composite BE/ME Ratio`, main = "Histogram of Composite BE/ME Ratio", xlab = "Composite BE/ME Ratio", ylab = "Frequency", col = "orange", xlim = c(0,7))
 
@@ -343,7 +362,23 @@ permCor(aggcompfin$`Composite Beta`, aggcompfin$`Composite Size`, n_samp = 10000
 Based on the permuted sample correlations, the actual correlation between composite beta and composite size appears to be significant at any reasonable level of alpha. 
 
 ###Multiple Regressions
-[COLTON]
+
+First, we will evaluate market beta as a predictor of average returns using the model {insert model with LaTex}. To best accomplish, we will perform cross sectional regressions to estimate gamma0 and gamma1, and then we will then test to see if the mean values for gamma0 and gamma1 are statistically significant from 0. This is essentially a test of the famous Capital Asset Pricing Model, or CAPM. An intercept (gamma0) statistically significantly different from 0 indicates that market beta (market risk) is not the only factor that can explain stock market retirns. A coefficient for market beta 
+
+```{r}
+models <- c()
+df
+for (i in 1:length(unique(df$Year))){
+  year <- unique(df$Year)[i]
+  print(df$mktret[df$Year == year])
+  models[i] <- lm(df$returns[df$Year == year] ~ df$mktret[df$Year == year], na.action=na.exclude)
+  break
+}
+
+models[1]
+```
+
+
 
 ###ANOVA, Logit, Multinomial, or Webscraping 
 For this portion of the project, we will use ANOVA to examine the differences of composite industry over composite size. We are curious about the pairs of differences for Composite Industry with regards to the Composite Size variable. Thus, our ANOVA will focus on the composite size variable, although we may choose another one for some 
