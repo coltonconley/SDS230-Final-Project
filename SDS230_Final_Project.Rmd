@@ -9,6 +9,8 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+hi
+
 ###Introduction 
 This project will examine data from Fama & French 1992 which provides information on the average firm size, monthly return, and beta for 49 different industries. The questions of the project are two-fold: First, we wish to examine how significant is each variable in predicting returns according to the Capital Asset Pricing Model (CAPM). Second, we wish to see if there is a difference between CAPM predictions and the actual data through various statistical comparisons including t-tests and permutation tests. 
 
