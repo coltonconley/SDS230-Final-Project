@@ -1,6 +1,8 @@
 ---
 title: "SDS230_Final_Project"
-output: html_document
+output:
+  word_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -8,9 +10,11 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ###Introduction 
-This project will examine data from Fama & French 1992 which provides information on the average firm size, monthly return, and beta (?) for 49 different industries. The questions of the project are two-fold: First, we wsih to examine how significant is each variable in predicting returns according to CAPM. Second, we wish to see if there is a difference between CAPM predictions and the actual data through various statistical comparisons including t-tests and permutation tests. 
+This project will examine data from Fama & French 1992 which provides information on the average firm size, monthly return, and beta for 49 different industries. The questions of the project are two-fold: First, we wish to examine how significant is each variable in predicting returns according to the Capital Asset Pricing Model (CAPM). Second, we wish to see if there is a difference between CAPM predictions and the actual data through various statistical comparisons including t-tests and permutation tests. 
 
-The purpose of this project will be to examine the hypothesis of the Capital Asset Pricing Model (CAPM) which suggests that alpha (define) can not be generated in a given portfolio or industry. 
+CAPM is a model that predicts a portfolio's returns given the underlying assets' risk, size, book to market ratio, industry and more. The purpose of this project will be to identify the variables in CAPM that are most significant in predicting returns, and confirm whether CAPM in general is an accurate predictor of actual returns.
+
+"The purpose of this project will be to examine the validity of the Efficient Market Hypothesis, which states that alpha, a statistic measuring a portfolio's deviation from the market return, will always be zero. In other words, markets are perfectly efficient which means that in the long-run, alpha cannot be consistently generated in a given portfolio or industry and all portfolios obtain market return. To examine the validity of the Efficient Market Hypothesis, we will look at real returns data and compare it to..." - (I don't think this paragraph is needed - Marcello)
 
 ```{r, include = FALSE}
 library(reshape)
@@ -22,6 +26,7 @@ library(olsrr)
 library(corrplot)
 library(leaps)
 library(car)
+#library(PerformanceAnalytics)
 source("http://www.reuningscherer.net/s&ds230/Rfuncs/regJDRS.txt")
 ```
 
@@ -42,8 +47,30 @@ The variables we plan to use and create in this dataset are:
 * Book Equity / Market Equity - 
 * Market Return - Defined as "The return on the overall theoretical market portfolio which includes all assets and having the portfolio weighted for value."
 * Risk Free Rate - Defined as "the rate of return a hypothetical investment with no risk of financial loss"
-* Beta - Defined as "a measure of a stock's volatility in relation to the market" The formula for Beta is [Insert covariance formula here]
+* Beta - Defined as "a measure of a stock's volatility in relation to the market" The formula for Beta is:
 
+$$\beta_i = \frac{Cov(R_e, R_m)}{Var(R_m)}$$
+
+where $$R_e$$ = the return on an individual portfolio and $$R_m$$ = the market return
+
+* Composite Returns 
+* Composite BE/ME Ratio
+* Composite Beta
+* Composte Size 
+
+The data sets we collected were formatted in such a way that required extensive data cleaning before beginning our analysis. 
+
+**First**, we needed to resolve cases of incomplete data across all of our data sets. 
+
+**Second**, the "returns" and "size" data was provided given on a monthly level from 1926 to 2009, and we needed to aggregate on a yearly level by applying the average function on all the months in each given year. 
+
+**Third**, the data provided in the four different data sets, "BE" (Book to Equity), "size" (Market Value), "returns" (returns in percent for the given period), "rf" (market return for that period), was organized horizontally, with years as rows, each industry (e.g. Agric, Food, Soda...) as columns, and then returns by year and industry in the middle. We needed to aggregate the various industry columns names into one "industry" column, which required transposing each data set.
+
+**Fourth**, in the "BE", "size", and "returns" data sets, there were 50 unique industries. When we took a closer look, it was clear that the industries were quite specific, so we needed to aggregate these industries into larger industry categories which we called "Composite Industries" (e.g. Healthcare, Industrials, and TMT). This industry aggregation process required averaging book to equity ratios, returns, sizes of each industry within Composite Industries.
+
+**Fifth**, we created a new "beta" variable based on the formula indicated above for each composite industry for each year.
+
+**Sixth**, once we formatted each of the four data sets in similar manners, we merged them into one data frame to be able to run tests and analyses on the data.
 
 ###Data Cleaning
 
@@ -52,23 +79,38 @@ First, across all datasets, when an observation has a firm size, percent return,
 #BE <- BE[complete.cases(BE),]
 #size <- size[complete.cases(size),]
 #returns <- returns[complete.cases(returns),]
-BE[BE== -99.99] <- 0 
-size[size == -99.99] <- 0 
-returns[returns == -99.99] <- 0 
-rf[rf == -99.99] <- 0
+BE[BE== -99.99] <- NA
+size[size == -99.99] <- NA 
+returns[returns == -99.99] <- NA 
+rf[rf == -99.99] <- NA
 
 ```
 
 Next, we will reformat the year variable to include only the year as oppossed to year-month while finding the yearly averages for the "returns" and "size" dataframes. We also decided to cut off the last year in the our  date variables in the Returns and Size dataframes. We will also find yearly averages for the returns and size dataframes to standardize all the dataframes of them by year.
 ```{r}
 size$Year <- substr(size$Year, 1, 4) #Strip off all ofthe month values 
-size <- aggregate(.~Year, data = size, mean)
+size <- aggregate(.~Year, data = size, mean,  na.action = na.pass)
 
+total_return <- function(returns_array){
+  final_return <- 1
+  for (individual_return in returns_array){
+    if (!is.na(individual_return) && !is.na(final_return)){
+      final_return <- final_return*(1+individual_return/100)
+    }
+    else{
+      final_return <- NA
+    }
+  }
+  if (!is.na(final_return)){
+    final_return <- final_return - 1
+  }
+  return(final_return)
+}
+returns
 returns$Year <- substr(returns$Year, 1, 4) #Ask what is going on here
-returns <- aggregate(.~Year, data = returns, mean)
-
+returns <- aggregate(.~Year, data = returns, total_return, na.action = na.pass)
 rf$Year <- substr(rf$Year,1,4)
-rf <- aggregate(.~Year, data= rf, mean)
+rf <- aggregate(.~Year, data= rf, total_return,  na.action = na.pass)
 rf$mktret <- rf$Mkt.RF+rf$RF #This creates the column for market return - done by adding back the risk free rate to the risk free market return
 
 #Kick off the last row so that we have same sized datasets. 
@@ -76,25 +118,6 @@ BE <- BE[1:89,]
 size <- size[1:89,]
 rf <- rf[1:89,]
 
-# separate year from month in "size" dataframe
-#size$Year2 <- substr(size$Year, 1, 4)
-#size$Month <- substr(size$Year, 5, 6)
-
-# separate year from month in "returns" dataframe
-#returns$Year2 <- substr(size$Year, 1, 4)
-#returns$Month <- substr(size$Year, 5, 6)
-
-# make an average by year for "size" dataframe
-
-#table(size[size$Year2 == "1926",])
-
-
-#apply(size[size$Year2 == "1926",], 2, mean)
-#size[size$Year2 == "1926",]
-
-#data.frame(size[], apply(size[,c(2:50)],2, mean) )
-
-#table(size$Year2)
 ```
 
 Before using our datasets, we need to convert them from wide form to long form. Using the melt function, we alter our dataframe such that it transforms from a 89x50 dataframe to a 4361x3 dataframe. We then adjust the names of the columns, eliminate repeated columns, and repeat for our other dataframes (returns and size).
@@ -129,6 +152,7 @@ Once we have transformed the dataframes into the appropriate form, we can then m
 size$YearInd <- paste(size$Year, size$Ind, sep = "_")
 BE$YearInd <- paste(BE$Year, BE$Ind, sep = "_")
 returns$YearInd <- paste(returns$Year, BE$Ind, sep = "_")
+
 df <- merge(size, BE, by = "YearInd")
 df <- merge(df, returns, by = "YearInd")
 df$YearInd <- NULL
@@ -158,13 +182,54 @@ for(i in unique(df$Ind)){
   a <- (cov(temp$returns,temp$mktret))/(var(temp$mktret))
   df$Beta[df$Ind==i] <- a
 }
+
+
 ```
 
-Exporting to excel to make manual changes to variables. 
+Exporting to excel to make manual changes to variables. ## DO WE STILL NEED THIS?? <- Marcello
 ```{r, include = FALSE}
-write.csv(df, "finaldf.csv")
+#write.csv(df, "finaldf.csv")
 ```
 
+Here, we create all of the composite variables for our dataset such as Composite Industry Returns, Composite Size, and Composite BE/ME ratio. We then merge these into a new dataframe.
+```{r}
+
+indreturnscomp <- aggregate(df$returns ~ df$CompInd + df$Year, df, mean)
+colnames(indreturnscomp) <- c("CompInd", "Year", "Composite Returns")
+#indreturnscomp
+aggcompret <- merge(df, indreturnscomp, all.x=T, by = c("Year", "CompInd"))
+#aggcompret
+
+#composite industry size 
+indsizecomp <- aggregate(df$size ~ df$CompInd + df$Year, df, mean)
+colnames(indsizecomp) <- c("CompInd", "Year", "Composite Size")
+#indsizecomp
+aggcompsize <- merge(aggcompret, indsizecomp, all.x=T, by = c("Year", "CompInd"))
+#aggcompsize
+
+#composite BE/ME ratio
+indbemecomp <- aggregate(df$BEMERatio ~ df$CompInd + df$Year, df, mean)
+colnames(indbemecomp) <- c("CompInd", "Year", "Composite BE/ME Ratio")
+#indbemecomp
+aggcompbeme <- merge(aggcompsize, indbemecomp, all.x=T, by = c("Year", "CompInd"))
+#aggcompbeme
+
+
+#composite beta and final dataframe
+indbetacomp <- aggregate(df$Beta ~ df$CompInd + df$Year, df, mean)
+colnames(indbetacomp) <- c("CompInd", "Year", "Composite Beta")
+#indbetacomp
+aggcompfin <- merge(aggcompbeme, indbetacomp, all.x=T, by = c("Year", "CompInd"))
+
+#final dataframe
+#aggcompfin
+```
+
+After examining our dataset, we have decided to subset such that we keep the first 53 years where there is more variability within our dataset.  
+```{r}
+aggcompfin$Year <- as.numeric(aggcompfin$Year)
+aggcompfin <- aggcompfin[aggcompfin$Year <= 53,]
+```
 
 ###Graphics 
 
@@ -172,40 +237,260 @@ First, we examine a boxplot between firm size and composite industry to examine 
 ```{r}
 boxplot(log(df$size + 1)~df$CompInd, main = "Boxplot of Composite Industry and Size", col = c("red", "blue", "green", "yellow","orange", "magenta", "turquoise", "lime green"), ylab = "Log of Size", las = 2, cex.axis = .8) 
 ```
-Overall, the industries appear to be relatively similar and there are no observable skews within any of the industries. Next, we will check if the data has a normal distribution within each composite industry.
+Overall, the industries appear to be relatively similar and there are no observable skews within any of the industries. All of the industries also seem to be approximately normally distributed, but next, we will confirm if the data has a normal distribution within each composite industry.
+
+Using our new dataframe, we first examine the average returns per composite industry by year from 1926-1979.
+```{r}
+aggcompfin$CompInd <- as.factor(aggcompfin$CompInd)
+plot(aggcompfin$`Composite Returns` ~ aggcompfin$Year, main = "Scatterplot of Year versus Return 1926-1979", pch = 24, col = aggcompfin$CompInd, xlab = "Year", ylab = "Yearly Returns")
+legend("bottom", legend= levels(aggcompfin$CompInd), pch=16, cex = 0.6, col = c(1:9))
+# lines() - How do we add in lines
+```
+Overall, returns seem relatively flat throughout the entire period. Given the number of composite industries, it is difficult to see any single trend in the graph. As such, we will have to run regression analyses by industry to verify if there are trends for each.
+
+Next, we examine the Book Equity / Market Equity Ratio for the nine composite industries throughout the 1926-1979 period. The changes in this financial ratio will give us an idea of the market valuations within each industry over time, to see if there were any valuation bubbles throughout the years.
 
 ```{r}
-qqPlot(df$returns~df$CompInd)
-qqPlot(log(df$size+1)~df$CompInd) #Given that size is in dollars, we found that a log transformation would be valuable to preserving normality. 
-qqPlot(df$BEMERatio~df$CompInd)
+plot(aggcompfin$`Composite BE/ME Ratio` ~ aggcompfin$Year, main = "BE/ME Ratio for Each Industry by Year", xlab = "Year", ylab = "Average BE/ME", col = factor(aggcompfin$CompInd))
+legend("topright", col= c(1:9), legend= levels(aggcompfin$CompInd), pch=16, cex = 0.6)
+#Add in the lines
 ```
+It seems as though healthcare was the lowest valued industry relative to the assets on their balance sheets. A couple of industries, including Commodities, Fincnaicls, Consumer, and "Other" seemed to go through a spike in valuation around the late 1930s. This is probably because of the recovery of stock prices following the cataclysmic drop that bottomed out in May 1932 during the Great Depression.
 
+Now, we will examine graphs within specific composite industries to observe how our continuous variables have changed throughout time. We have elected two composite industries at random (TMT and Commodities) in order to limit the number of graphs we are making. 
 
-
-
-
-
-
-
-
-
-Returns over time for a specific composite industry  
 ```{r}
-plot(df$returns ~ df$Year, main = "Scatterplot of Year versus Average Yearly Returns", pch = 24, col = "blue", xlab = "Year", ylab = "Average Yearly Returns")
-```
+#Making a new dataframe that has one value per composite industry
+single <- data.frame(Year = c(1:53), Composite_Returns_TMT = NA, Composite_Size_TMT = NA, Composite_BEME_Ratio_TMT = NA, Composite_Beta_TMT = NA, Composite_Returns_Com = NA, Composite_Size_Com = NA, Composite_BEME_Ratio_Com = NA, Composite_Beta_Com = NA)
+for(i in 1:length(unique(aggcompfin$Year))){
+  temp1 <- aggcompfin[aggcompfin$Year == i,]
+  a <- tapply(temp1$`Composite Size`, temp1$CompInd, mean)
+  single$Composite_Size_TMT[i] <- a[8]
+  b <- tapply(temp1$`Composite Returns`, temp1$CompInd, mean)
+  single$Composite_Returns_TMT[i] <- b[8]
+  c <- tapply(temp1$`Composite BE/ME Ratio`, temp1$CompInd, mean)
+  single$Composite_BEME_Ratio_TMT[i] <- c[8]
+  d <- tapply(temp1$`Composite Beta`, temp1$CompInd, mean)
+  single$Composite_Beta_TMT[i] <- d[8]
+  single$Composite_Size_Com[i] <- a[1]
+  single$Composite_Returns_Com[i] <- b[1]
+  single$Composite_BEME_Ratio_Com[i] <- c[1]
+  single$Composite_Beta_Com[i] <- d[1]
+}
 
-Histogram for BE/ME, size, or returns for the years of a particular industry. 
+barplot(single$Composite_BEME_Ratio_TMT, main = "Barplot of TMT BE/ME Ratio from 1926-1979", col = "blue", ylab = "Composite BE/ME for TMT")
+barplot(single$Composite_Returns_TMT, main = "Barplot of TMT Average Yearly Returns from 1926-1979", col = "green", ylab = "Composite Returns for TMT")
+barplot(single$Composite_Size_TMT, main = "Barplot of TMT Composite Size from 1926-1979", col = "green", ylab = "Composite Average Size for TMT")
+```
+We conclude from the three graphs that 1) TMT company valuations spiked in the 1940s, 2) Average yearly returns in the TMT industry were net positive from 1926-1979, and 3) the market value of TMT companies decreased during the Great Depression and subsequently grew from 1940s to 1970s.
+
+Now, we examine the same graphs for the Commodities industry. 
 ```{r}
-
+barplot(single$Composite_BEME_Ratio_Com, main = "Barplot of Commodities BE/ME Ratio from 1926-1979", col = "green", ylab = "Composite BE/ME for Commodities")
+barplot(single$Composite_Returns_Com, main = "Barplot of Commodities Composite Returns from 1926-1979", col = "green", ylab = "Composite Average Yearly Returns for Commodities")
+barplot(single$Composite_Size_Com, main = "Barplot of Commodities Size from 1926-1979", col = "green", ylab = "Composite Size for Commodities")
 ```
+We conclude from the three graphs that 1) Commodities company valuations spiked in the 1930s before the worst of the Great Depression, 2) Average yearly returns in the Commodities industry were net positive from 1926-1979, and 3) the market value of Commodities companies grew consistently from 1940s to 1970s.
+
+
+We have also elected to examine some of the histograms for our composite variables to get a general sense of the distribution and see if any transformations may be necessary. 
+```{r}
+hist(aggcompfin$`Composite Returns`, main = "Histogram of Composite Returns", xlab = "Average Yearly Composite Returns", ylab = "Frequency", col = "blue", xlim = c(-2,2))
+
+hist(aggcompfin$`Composite BE/ME Ratio`, main = "Histogram of Composite BE/ME Ratio", xlab = "Composite BE/ME Ratio", ylab = "Frequency", col = "orange", xlim = c(0,7))
+
+hist(aggcompfin$`Composite Beta`, main = "Histogram of Composite Beta", xlab = "Composite Beta", ylab = "Frequency", col = "green", xlim = c(0.1,1))
+
+hist(aggcompfin$`Composite Size`, main = "Histogram of Composite Size", xlab = "Composite Average Size Yearly", ylab = "Frequency", col = "red")
+```
+We have created histograms of the four composite variables in our dataset. The histogram for composite returns appear relatively normally distributed. By contrast, the histogram of composite BE/ME Ratio is right skewed as is the histogram of composite returns whereas the histogram of composite beta is more left skewed. 
+
+Finally, we examine the normal quantile plots for our composite industries to see if we have normal distribution within each composite industry. 
+```{r}
+qqPlot(aggcompfin$`Composite Returns`~aggcompfin$CompInd)
+qqPlot(aggcompfin$`Composite Size`~aggcompfin$CompInd)
+qqPlot(aggcompfin$`Composite BE/ME Ratio` ~ aggcompfin$CompInd)
+qqPlot(aggcompfin$`Composite Beta`~ aggcompfin$CompInd)
+```
+[Write analysis and fix graph titles]
 
 ###Basic Tests
 
+Because our data does not include any two-level categorical groups, we find it more useful to examine the correlations between our different continous composite variables which we made graphs for above. However, since our new dataframe only has two industries, we can use a basic t-test to compare the four composite variables. 
+```{r}
+#Basic boxplots to get an inclination of the differences 
+boxplot(single$Composite_Returns_TMT, single$Composite_Returns_Com, ylab = "Composite Returns", main = "Average Yearly Composite Returns (TMT vs Commodities)", col = "green", names = c("TMT", "Commodities"))
+boxplot(single$Composite_Size_TMT, single$Composite_Size_Com, ylab = "Composite Size", main = "Average Yearly Composite Size (TMT vs Commodities)", col = "red", names = c("TMT", "Commodities"))
+boxplot(single$Composite_BEME_Ratio_TMT, single$Composite_BEME_Ratio_Com, ylab = "Composite BE/ME Ratio", main = "Composite BE/ME Ratio (TMT vs Commodities)", col = "blue", names = c("TMT", "Commodities"))
+boxplot(single$Composite_Beta_TMT, single$Composite_Beta_Com, ylab = "Composite Beta", main = "Composite Beta (TMT vs Commodities)", col = "orange", names = c("TMT", "Commodities"))
+
+t.test(single$Composite_Returns_TMT, single$Composite_Returns_Com)
+t.test(single$Composite_Size_TMT, single$Composite_Size_Com)
+t.test(single$Composite_BEME_Ratio_TMT, single$Composite_BEME_Ratio_Com)
+# t.test(single$Composite_Beta_TMT, single$Composite_Beta_Com) - Does not work because data is essentially constant. Based on the boxplot, the Betas do appear to be different between the industries. 
+```
+Based on the t-test, Composite Returns between TMT and Commodities are not statistically significantly different at any reasonable level of alpha. By contrast, size for the two industries is statistically significant at very low levels of alpha as the p-value is 0.0035. Based on the boxplot, it appears that TMT is larger than commodities for size. Finally, the BE/ME Ratio between the two industries is statistically significantly different at the 0.05 alpha level as the p-value is 0.008464. Based on the boxplot, the BE/ME Ratio for Commodities is larger than TMT. 
+
+
+```{r}
+#Now we check for significant correlations at the 95% level and plot them. 
+sigcorr <- cor.mtest(aggcompfin[,c(9, 11:14)], conf.level = .95)
+corrplot.mixed(cor(aggcompfin[,c(9, 11:14)]), lower.col="black", upper = "ellipse", tl.col = "black", number.cex=.7, 
+               order = "hclust", tl.pos = "lt", tl.cex=.7, p.mat = sigcorr$p, sig.level = .05) #Adjust the top axis text
+```
+Overall, the correlations between variables are relatively low. The highest correlation is between market return and composite returns for all of the industries. Composite Beta and Composite BE/ME ratio both have a low negative correlation with composite size, but the correlation is statistically significant at the 95% level. Other than these several correlations, the others are too low to hold much interpretation. We will proceed by analyzing these three correlations through bootstraps and permutation tests. 
+
+Briefly, let's look on non-linearity, correlation, and histograms all at once for our variables of interest. 
+```{r}
+chart.Correlation(aggcompfin[,c(9, 11:14)], histogram=TRUE, pch=19)
+```
+The graph does not provide much more information. Although we see that the correlation between composite returns and market return is quite linear, which explains the strong correlation. [ADD MORE HERE]. 
+
+Now, we proceed to construct a bootstrapped correlation interval for the correlation between market return and composite industry return. [ASK ABOUT THIS PART]
+```{r}
+
+```
+
 ###Permutation Test 
+We now conduct a permutation test between composite beta and composite size in order to show a non-zero statistically significant correlation between these two variables. [ASK ABOUT NORMAL DISTRIBUTION OUTLIERS ETC]
+```{r}
+myCor <- function(x,y){
+  plot(x,y,pch=19, col="red", xlab = "Composite Beta", ylab = "Composite Size")
+  mtext(paste("Sample Correlation =", round(cor(x,y),3)), cex=1.2)
+}
+
+permCor <- function(x, y, n_samp = 10000, plot = T){
+   corResults <- rep(NA, n_samp)
+   for (i in 1:n_samp){
+      corResults[i] <- cor(x, sample(y))
+   }
+   pval <- mean(abs(corResults) >= abs(cor(x,y)))
+   if (plot == T){
+      #Make histogram of permuted correlations
+      hist(corResults, col = "yellow", main = "", xlab = "Correlations", breaks = 50,
+           xlim = range(corResults,cor(x,y)))
+      mtext("Permuted Sample Correlations", cex = 1.2, line = 1)
+      mtext(paste("Permuted P-value =",round(pval,5)), cex = 1, line = 0)
+      abline(v = cor(x,y), col="blue", lwd=3)
+      text(cor(x,y)*.97, 0,paste("Actual Correlation =", round(cor(x,y),2)),srt = 90, adj = 0)
+   }
+   if (plot == F){
+      return(round(pval,5))
+   }  
+}
+
+myCor(aggcompfin$`Composite Beta`, aggcompfin$`Composite Size`)
+permCor(aggcompfin$`Composite Beta`, aggcompfin$`Composite Size`, n_samp = 10000, plot = T)
+```
+Based on the permuted sample correlations, the actual correlation between composite beta and composite size appears to be significant at any reasonable level of alpha. 
 
 ###Multiple Regressions
 
+First, we will evaluate market beta as a predictor of average returns using the model {insert model with LaTex}. To best accomplish, we will perform cross sectional regressions to estimate gamma0 and gamma1, and then we will then test to see if the mean values for gamma0 and gamma1 are statistically significant from 0. This is essentially a test of the famous Capital Asset Pricing Model, or CAPM. An intercept (gamma0) statistically significantly different from 0 indicates that market beta (market risk) is not the only factor that can explain stock market retirns. A coefficient for market beta 
+
+```{r}
+models <- c()
+df
+for (i in 1:length(unique(df$Year))){
+  year <- unique(df$Year)[i]
+  print(df$mktret[df$Year == year])
+  models[i] <- lm(df$returns[df$Year == year] ~ df$mktret[df$Year == year], na.action=na.exclude)
+  break
+}
+
+models[1]
+```
+
+
+
 ###ANOVA, Logit, Multinomial, or Webscraping 
+For this portion of the project, we will use ANOVA to examine the differences of composite industry over composite size. We are curious about the pairs of differences for Composite Industry with regards to the Composite Size variable. Thus, our ANOVA will focus on the composite size variable, although we may choose another one for some 
+
+Earlier, we examined the boxplot of composite industry by size and it appeared that the boxplots were relatively even. We start by examing the sample standard deviations across composite industries to see if we pass our assumptions for ANOVA (ie. the max to min ratio of standard deviations is less than 2).
+
+```{r}
+print("SD by Genre")
+(sds <- tapply(aggcompfin$`Composite Size`, aggcompfin$CompInd, sd))
+
+print("Ratio of Max/Min Sample SD")
+round(max(sds)/min(sds),1)
+```
+The ratio is 3.5. Thus, our assumption for ANOVA is not satisfied. We will continue with the ANOVA analysis, but we will also use non-parametric tests to see if the variances are the same across composite industries. Specifically, we believe it best to use the Kruskal-Wallace test as it makes no assumptions of normality within each group or that the variances be equal (have a ratio less than 2). We examined our normal quantile plots before, and saw that the data was relatively normally distributed, but not for all genres. Thus, Welch's ANOVA is not a solid choice in this scenario. 
+
+
+We begin with ANOVA:
+```{r}
+aov1 <- aov(aggcompfin$`Composite Size` ~ aggcompfin$CompInd)
+summary(aov1)
+
+#We use Tukey comparisons to see differences in the mean size between composite industries
+TukeyHSD(aov1)
+par(mar=c(5,11,4,1))
+plot(TukeyHSD(aov1), las=1)
+
+#Finally, we examine our residuals for the ANOVA model
+myResPlots2(aov1, label = "Size Composite Industry")
+```
+*Analysis:* Our anova model shows that the mean composite size is statistically significantly different between composite industries given that the p-value is smaller than any reasonable value of alpha. The degrees of freedom reported by the test are what we expect - k (# of groups) - 1 degrees of freedom for composite industries. Moreover, the degrees of freedom for the residuals are what we expect: the number of observations - the number of groups. Examining the normal quantile plot we see that our errors are not normally distributed and the fits vs studentized residuals plot shows evidence of heteroskedasticity.
+
+[ADD IN ANALYSIS OF THE TUKEY COMPARISONS]
+
+
+```{r}
+#Now, let's see what transformation is suggested
+trans1 <- boxCox(aov1)
+trans1$x[which.max(trans1$y)]
+
+#The suggested transformation is a log. Let's see what happens to our ANOVA model if we use the transformation. The transformation makes sense given that size is on a dollar scale.
+transsize <- log(aggcompfin$`Composite Size`)
+
+print("SD by Genre")
+(sds <- tapply(transsize, aggcompfin$CompInd, sd))
+
+print("Ratio of Max/Min Sample SD")
+round(max(sds)/min(sds),1)
+
+#Now the ratio is less than 2 and our assumption for ANOVA is satisfied. We will poroceed with the transformed model
+aov2 <- aov(transsize ~ aggcompfin$CompInd)
+summary(aov2)
+```
+*Analysis:*Our second model, using our transformed model in which we took the log of size, still shows statistically significant differences between composite industries given that the p-value is lower than any reasonable alpha. 
+
+
+```{r}
+#pairwise.t.test(transsize, aggcompfin$CompInd) 
+
+#Fix the labels on the side
+TukeyHSD(aov2)
+par(mar=c(5,11,4,1))
+plot(TukeyHSD(aov2), las=1)
+
+
+myResPlots2(aov2, label = "Size Composite Industry")
+```
+*Analysis:* [ADD IN ANALYSIS OF THE TUKEY COMPARISONS]
+The errors of our new ANOVA model still do not appear normally distributed, but the fits vs residuals plot shows less evidence of heteroskedasticity. 
+
+Before we continue with our non-parametric tests, we will use Bartlett's and Levene's test to see if variances are the equal. 
+```{r}
+bartlett.test(transsize, aggcompfin$CompInd)
+```
+*Analysis:* Based on Bartlett's test, we reject the null-hypothesis that variances are homogeneous, a result which could be due to non-normality given that Bartlett test assumes that the data is drawn from a normal distribution (and transsize, as seen above, is not normal).
+
+```{r}
+leveneTest(transsize, aggcompfin$CompInd)
+```
+*Analysis:* Once again, the F-value is very high and the p-value is much lower than any reasonable alpha meaning we reject the null hypothesis that the variances are homogenous (Levene's test makes no assumptions about normality which means its more appropriate for analyzing pctreturn). 
+
+Based on the results of Bartlett's test, we find it best to use Kruskal's test as our non-parametric test as it makes no assumptions of normality or equality of variances. Now, we proceed with our non-parametric tests.
+```{r}
+#Now, with Kruskal's test
+kruskal.test(transsize ~ aggcompfin$CompInd)
+
+#Comparing to One-Way ANOVA
+summary.aov(aov(transsize ~ aggcompfin$CompInd))
+```
+*Analysis:*The chi-squared value for the Kruskal-Wallis test is high and the p-value is small enough to reject the null hypothesis at any reasonable level of alpha meaning that at least one group median is different from others. As stated earlier, The Kurskal-Wallis test is a good choice here given that the results are statistically significant and our original data is not normally distributed within each genre and the variances are not the same between groups (based on the results from Levene and Bartlette tests). 
 
 ###Final Comments 
 
