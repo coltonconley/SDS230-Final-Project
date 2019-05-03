@@ -116,10 +116,21 @@ rf <- aggregate(.~Year, data= rf, total_return,  na.action = na.pass)
 rf$mktret <- rf$Mkt.RF+rf$RF #This creates the column for market return - done by adding back the risk free rate to the risk free market return
 
 #Kick off the last row so that we have same sized datasets. 
-BE <- BE[1:89,]
-size <- size[1:89,]
-rf <- rf[1:89,]
 
+BE$Year <- as.integer(BE$Year) + 1
+size$Year <- as.integer(size$Year) + 1
+BE <- BE[1:88,]
+size <- size[1:88,]
+rf <- rf[2:89,]
+returns <- returns[2:89,]
+BE
+size
+returns
+rf
+dim(BE)
+dim(size)
+dim(rf)
+dim(returns)
 ```
 
 Before using our datasets, we need to convert them from wide form to long form. Using the melt function, we alter our dataframe such that it transforms from a 89x50 dataframe to a 4361x3 dataframe. We then adjust the names of the columns, eliminate repeated columns, and repeat for our other dataframes (returns and size).
@@ -391,18 +402,40 @@ Based on the permuted sample correlations, the actual correlation between compos
 First, we will evaluate market beta as a predictor of average returns using the model {insert model with LaTex}. To best accomplish, we will perform cross sectional regressions to estimate gamma0 and gamma1, and then we will then test to see if the mean values for gamma0 and gamma1 are statistically significant from 0. This is essentially a test of the famous Capital Asset Pricing Model, or CAPM. An intercept (gamma0) statistically significantly different from 0 indicates that market beta (market risk) is not the only factor that can explain stock market retirns. A coefficient for market beta 
 
 ```{r}
-models <- c()
-df
+intercepts <- c()
+coefficients <- c()
 for (i in 1:length(unique(df$Year))){
   year <- unique(df$Year)[i]
-  print(df$mktret[df$Year == year])
-  models[i] <- lm(df$returns[df$Year == year] ~ df$mktret[df$Year == year], na.action=na.exclude)
-  break
+  #print(df$returns[df$Year == year])
+  temp_df <- na.omit(data.frame(df$returns[df$Year == year], df$Beta[df$Year == year]))
+  names(temp_df) <- c('returns', 'beta')
+  intercepts <- append(intercepts, as.double(lm(temp_df$returns ~ temp_df$beta)$coefficients[1]))
+  coefficients <- append(coefficients, as.double(lm(temp_df$returns ~ temp_df$beta)$coefficients[2]))
 }
-
-models[1]
+hist(coefficients)
+hist(intercepts)
+mean(coefficients)
+sd(coefficients)
+mean(intercepts)
+sd(intercepts)
 ```
 
+Now, we will attempt to find the best model to predict returns, given the data. Some important things to note: measures of size and book equity to market equity will be lagged by 1 time step because that data would not have been available at the time of prediction. 
+
+```{r}
+
+lagged <- df
+lagged$size <- shift(lagged$size)
+lagged
+na_free_df <- na.omit(df)
+na_free_df
+mod1 <- lm(na_free_df$returns ~ na_free_df$size + na_free_df$BEMERatio + na_free_df$Ind +  na_free_df$CompInd + na_free_df$Beta + na_free_df$mktret + na_free_df$RF + na_free_df$Mkt.RF)
+#  na_free_df$Ind +
+mod2 <- lm(na_free_df$returns ~ na_free_df$size + na_free_df$BEMERatio + na_free_df$CompInd +  na_free_df$Beta + na_free_df$mktret + na_free_df$RF)
+
+summary(mod1)
+summary(mod2)
+```
 
 
 ###ANOVA, Logit, Multinomial, or Webscraping 
