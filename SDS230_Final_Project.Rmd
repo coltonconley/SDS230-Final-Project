@@ -1,6 +1,8 @@
 ---
 title: "SDS230_Final_Project"
-output: html_document
+output:
+  word_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -8,9 +10,11 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ###Introduction 
-This project will examine data from Fama & French 1992 which provides information on the average firm size, monthly return, and beta for 49 different industries. The questions of the project are two-fold: First, we wish to examine how significant is each variable in predicting returns according to CAPM. Second, we wish to see if there is a difference between CAPM predictions and the actual data through various statistical comparisons including t-tests and permutation tests. 
+This project will examine data from Fama & French 1992 which provides information on the average firm size, monthly return, and beta for 49 different industries. The questions of the project are two-fold: First, we wish to examine how significant is each variable in predicting returns according to the Capital Asset Pricing Model (CAPM). Second, we wish to see if there is a difference between CAPM predictions and the actual data through various statistical comparisons including t-tests and permutation tests. 
 
-The purpose of this project will be to examine the hypothesis of the Capital Asset Pricing Model (CAPM) which suggests that alpha (define) can not be generated in a given portfolio or industry. [ADD MORE AND MAKE BETTER]
+CAPM is a model that predicts a portfolio's returns given the underlying assets' risk, size, book to market ratio, industry and more. The purpose of this project will be to identify the variables in CAPM that are most significant in predicting returns, and confirm whether CAPM in general is an accurate predictor of actual returns.
+
+"The purpose of this project will be to examine the validity of the Efficient Market Hypothesis, which states that alpha, a statistic measuring a portfolio's deviation from the market return, will always be zero. In other words, markets are perfectly efficient which means that in the long-run, alpha cannot be consistently generated in a given portfolio or industry and all portfolios obtain market return. To examine the validity of the Efficient Market Hypothesis, we will look at real returns data and compare it to..." - (I don't think this paragraph is needed - Marcello)
 
 ```{r, include = FALSE}
 library(reshape)
@@ -43,13 +47,31 @@ The variables we plan to use and create in this dataset are:
 * Book Equity / Market Equity - 
 * Market Return - Defined as "The return on the overall theoretical market portfolio which includes all assets and having the portfolio weighted for value."
 * Risk Free Rate - Defined as "the rate of return a hypothetical investment with no risk of financial loss"
-* Beta - Defined as "a measure of a stock's volatility in relation to the market" The formula for Beta is [Insert Beta formula here using LaTex]
+* Beta - Defined as "a measure of a stock's volatility in relation to the market" The formula for Beta is:
+
+$$\beta_i = \frac{Cov(R_e, R_m)}{Var(R_m)}$$
+
+where $$R_e$$ = the return on an individual portfolio and $$R_m$$ = the market return
+
 * Composite Returns 
 * Composite BE/ME Ratio
 * Composite Beta
 * Composte Size 
 
-[ADD FINAL SMALL CONCLUSION HERE ABOUT THE DIFFICULTIES OF WORKING WITH OUR DATA, ETC]
+The data sets we collected were formatted in such a way that required extensive data cleaning before beginning our analysis. 
+
+**First**, we needed to resolve cases of incomplete data across all of our data sets. 
+
+**Second**, the "returns" and "size" data was provided given on a monthly level from 1926 to 2009, and we needed to aggregate on a yearly level by applying the average function on all the months in each given year. 
+
+**Third**, the data provided in the four different data sets, "BE" (Book to Equity), "size" (Market Value), "returns" (returns in percent for the given period), "rf" (market return for that period), was organized horizontally, with years as rows, each industry (e.g. Agric, Food, Soda...) as columns, and then returns by year and industry in the middle. We needed to aggregate the various industry columns names into one "industry" column, which required transposing each data set.
+
+**Fourth**, in the "BE", "size", and "returns" data sets, there were 50 unique industries. When we took a closer look, it was clear that the industries were quite specific, so we needed to aggregate these industries into larger industry categories which we called "Composite Industries" (e.g. Healthcare, Industrials, and TMT). This industry aggregation process required averaging book to equity ratios, returns, sizes of each industry within Composite Industries.
+
+**Fifth**, we created a new "beta" variable based on the formula indicated above for each composite industry for each year.
+
+**Sixth**, once we formatted each of the four data sets in similar manners, we merged them into one data frame to be able to run tests and analyses on the data.
+
 ###Data Cleaning
 
 First, across all datasets, when an observation has a firm size, percent return, or beta ratio of zero, the dataset reads -99.99. We will begin by transforming all of these values to zero. 
@@ -164,14 +186,13 @@ for(i in unique(df$Ind)){
 
 ```
 
-Exporting to excel to make manual changes to variables. 
+Exporting to excel to make manual changes to variables. ## DO WE STILL NEED THIS?? <- Marcello
 ```{r, include = FALSE}
 #write.csv(df, "finaldf.csv")
 ```
 
 Here, we create all of the composite variables for our dataset such as Composite Industry Returns, Composite Size, and Composite BE/ME ratio. We then merge these into a new dataframe.
 ```{r}
-
 
 indreturnscomp <- aggregate(df$returns ~ df$CompInd + df$Year, df, mean)
 colnames(indreturnscomp) <- c("CompInd", "Year", "Composite Returns")
@@ -216,7 +237,7 @@ First, we examine a boxplot between firm size and composite industry to examine 
 ```{r}
 boxplot(log(df$size + 1)~df$CompInd, main = "Boxplot of Composite Industry and Size", col = c("red", "blue", "green", "yellow","orange", "magenta", "turquoise", "lime green"), ylab = "Log of Size", las = 2, cex.axis = .8) 
 ```
-Overall, the industries appear to be relatively similar and there are no observable skews within any of the industries. Next, we will check if the data has a normal distribution within each composite industry. [ADD MORE ANALYSIS?]
+Overall, the industries appear to be relatively similar and there are no observable skews within any of the industries. All of the industries also seem to be approximately normally distributed, but next, we will confirm if the data has a normal distribution within each composite industry.
 
 Using our new dataframe, we first examine the average returns per composite industry by year from 1926-1979.
 ```{r}
@@ -225,17 +246,19 @@ plot(aggcompfin$`Composite Returns` ~ aggcompfin$Year, main = "Scatterplot of Ye
 legend("bottom", legend= levels(aggcompfin$CompInd), pch=16, cex = 0.6, col = c(1:9))
 # lines() - How do we add in lines
 ```
-Overall, returns seem relatively flat throughout the entire period. Given the number of composite industries, it is difficult to see any single trend in the graph. [ADD MORE ANALYSIS?]
+Overall, returns seem relatively flat throughout the entire period. Given the number of composite industries, it is difficult to see any single trend in the graph. As such, we will have to run regression analyses by industry to verify if there are trends for each.
 
-Next, we examine the Book Equity / Market Equity Ratio for the nine composite industries throughout the 1926-1979 period. The changes in this financial ratio will give us an idea of...
+Next, we examine the Book Equity / Market Equity Ratio for the nine composite industries throughout the 1926-1979 period. The changes in this financial ratio will give us an idea of the market valuations within each industry over time, to see if there were any valuation bubbles throughout the years.
+
 ```{r}
 plot(aggcompfin$`Composite BE/ME Ratio` ~ aggcompfin$Year, main = "BE/ME Ratio for Each Industry by Year", xlab = "Year", ylab = "Average BE/ME", col = factor(aggcompfin$CompInd))
 legend("topright", col= c(1:9), legend= levels(aggcompfin$CompInd), pch=16, cex = 0.6)
 #Add in the lines
 ```
-[ADD IN ANALYSIS]
+It seems as though healthcare was the lowest valued industry relative to the assets on their balance sheets. A couple of industries, including Commodities, Fincnaicls, Consumer, and "Other" seemed to go through a spike in valuation around the late 1930s. This is probably because of the recovery of stock prices following the cataclysmic drop that bottomed out in May 1932 during the Great Depression.
 
 Now, we will examine graphs within specific composite industries to observe how our continuous variables have changed throughout time. We have elected two composite industries at random (TMT and Commodities) in order to limit the number of graphs we are making. 
+
 ```{r}
 #Making a new dataframe that has one value per composite industry
 single <- data.frame(Year = c(1:53), Composite_Returns_TMT = NA, Composite_Size_TMT = NA, Composite_BEME_Ratio_TMT = NA, Composite_Beta_TMT = NA, Composite_Returns_Com = NA, Composite_Size_Com = NA, Composite_BEME_Ratio_Com = NA, Composite_Beta_Com = NA)
@@ -259,15 +282,15 @@ barplot(single$Composite_BEME_Ratio_TMT, main = "Barplot of TMT BE/ME Ratio from
 barplot(single$Composite_Returns_TMT, main = "Barplot of TMT Average Yearly Returns from 1926-1979", col = "green", ylab = "Composite Returns for TMT")
 barplot(single$Composite_Size_TMT, main = "Barplot of TMT Composite Size from 1926-1979", col = "green", ylab = "Composite Average Size for TMT")
 ```
-[ANALYSIS ON TMT GRAPHS]
+We conclude from the three graphs that 1) TMT company valuations spiked in the 1940s, 2) Average yearly returns in the TMT industry were net positive from 1926-1979, and 3) the market value of TMT companies decreased during the Great Depression and subsequently grew from 1940s to 1970s.
 
 Now, we examine the same graphs for the Commodities industry. 
 ```{r}
 barplot(single$Composite_BEME_Ratio_Com, main = "Barplot of Commodities BE/ME Ratio from 1926-1979", col = "green", ylab = "Composite BE/ME for Commodities")
-barplot(single$Composite_Size_Com, main = "Barplot of Commodities Size from 1926-1979", col = "green", ylab = "Composite Size for Commodities")
 barplot(single$Composite_Returns_Com, main = "Barplot of Commodities Composite Returns from 1926-1979", col = "green", ylab = "Composite Average Yearly Returns for Commodities")
+barplot(single$Composite_Size_Com, main = "Barplot of Commodities Size from 1926-1979", col = "green", ylab = "Composite Size for Commodities")
 ```
-[ANALYSIS ON THE COMMODITIES]
+We conclude from the three graphs that 1) Commodities company valuations spiked in the 1930s before the worst of the Great Depression, 2) Average yearly returns in the Commodities industry were net positive from 1926-1979, and 3) the market value of Commodities companies grew consistently from 1940s to 1970s.
 
 
 We have also elected to examine some of the histograms for our composite variables to get a general sense of the distribution and see if any transformations may be necessary. 
