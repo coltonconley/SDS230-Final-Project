@@ -9,14 +9,10 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-hi
-
 ###Introduction 
-This project will examine data from Fama & French 1992 which provides information on the average firm size, monthly return, and beta for 49 different industries. The questions of the project are two-fold: First, we wish to examine how significant is each variable in predicting returns according to the Capital Asset Pricing Model (CAPM). Second, we wish to see if there is a difference between CAPM predictions and the actual data through various statistical comparisons including t-tests and permutation tests. 
+This project will examine data from Ken French's website which provides information on the average firm size, monthly return, and beta for 49 different industries, as well as the overall market return and risk free rate. The questions of the project are two-fold: First, we wish to assess whether the returns of different industries behave similarly (do they have similar mean returns, are they correlated, do they have similar book equity to market equity ratios, etc). Second, we wish to assess whether the Capital Asset Pricing Model accurately predicts the cross sectional returns of the various industries.
 
-CAPM is a model that predicts a portfolio's returns given the underlying assets' risk, size, book to market ratio, industry and more. The purpose of this project will be to identify the variables in CAPM that are most significant in predicting returns, and confirm whether CAPM in general is an accurate predictor of actual returns.
-
-"The purpose of this project will be to examine the validity of the Efficient Market Hypothesis, which states that alpha, a statistic measuring a portfolio's deviation from the market return, will always be zero. In other words, markets are perfectly efficient which means that in the long-run, alpha cannot be consistently generated in a given portfolio or industry and all portfolios obtain market return. To examine the validity of the Efficient Market Hypothesis, we will look at real returns data and compare it to..." - (I don't think this paragraph is needed - Marcello)
+CAPM is a model that predicts a portfolio's returns given the portfolio's market risk. We will test the CAPM using the method pioneered in Fama-Macbeth (1973) by first calculating each industry's market beta, and then running cross sectional regressions to see whether beta explains the average returns on each industy. 
 
 ```{r, include = FALSE}
 library(reshape)
@@ -26,9 +22,8 @@ library(lubridate)
 library(rvest)
 library(olsrr)
 library(corrplot)
-library(leaps)
-library(car)
-#library(PerformanceAnalytics)
+library(readxl)
+library(PerformanceAnalytics)
 source("http://www.reuningscherer.net/s&ds230/Rfuncs/regJDRS.txt")
 ```
 
@@ -37,7 +32,7 @@ source("http://www.reuningscherer.net/s&ds230/Rfuncs/regJDRS.txt")
 ```{r}
 BE <- read.csv("Average BE .csv")
 size <- read.csv("Average Firm Size Monthly.csv")
-returns <- read.csv("Average Weighted Returns Monthly.csv")
+returns <- read_excel("Average Weighted Returns Monthly.xlsx")
 rf <- read.csv("RP-RF.csv")
 ```
 
@@ -115,22 +110,16 @@ rf$Year <- substr(rf$Year,1,4)
 rf <- aggregate(.~Year, data= rf, total_return,  na.action = na.pass)
 rf$mktret <- rf$Mkt.RF+rf$RF #This creates the column for market return - done by adding back the risk free rate to the risk free market return
 
-#Kick off the last row so that we have same sized datasets. 
 
+#We want the data at each time click to be the data that would have been available to someone at that time. Because size and BE/ME are backwards looking calculations but predictive variables of returns, they contain information from the future that would not have been avaialble to someone trying to make a prediction. Therefore, we lag both of these variables by one year.
 BE$Year <- as.integer(BE$Year) + 1
 size$Year <- as.integer(size$Year) + 1
+
+#Kick off the last row so that we have same sized datasets and adjust for rf and returns not being lagged.
 BE <- BE[1:88,]
 size <- size[1:88,]
 rf <- rf[2:89,]
 returns <- returns[2:89,]
-BE
-size
-returns
-rf
-dim(BE)
-dim(size)
-dim(rf)
-dim(returns)
 ```
 
 Before using our datasets, we need to convert them from wide form to long form. Using the melt function, we alter our dataframe such that it transforms from a 89x50 dataframe to a 4361x3 dataframe. We then adjust the names of the columns, eliminate repeated columns, and repeat for our other dataframes (returns and size).
@@ -165,7 +154,6 @@ Once we have transformed the dataframes into the appropriate form, we can then m
 size$YearInd <- paste(size$Year, size$Ind, sep = "_")
 BE$YearInd <- paste(BE$Year, BE$Ind, sep = "_")
 returns$YearInd <- paste(returns$Year, BE$Ind, sep = "_")
-
 df <- merge(size, BE, by = "YearInd")
 df <- merge(df, returns, by = "YearInd")
 df$YearInd <- NULL
@@ -175,6 +163,7 @@ df$variable <- NULL
 df$Year <- NULL
 df$Ind.x <- NULL
 names(df)[1] <- "Year"
+
 ```
 
 
@@ -196,12 +185,6 @@ for(i in unique(df$Ind)){
   df$Beta[df$Ind==i] <- a
 }
 
-
-```
-
-Exporting to excel to make manual changes to variables. ## DO WE STILL NEED THIS?? <- Marcello
-```{r, include = FALSE}
-#write.csv(df, "finaldf.csv")
 ```
 
 Here, we create all of the composite variables for our dataset such as Composite Industry Returns, Composite Size, and Composite BE/ME ratio. We then merge these into a new dataframe.
@@ -235,28 +218,22 @@ colnames(indbetacomp) <- c("CompInd", "Year", "Composite Beta")
 aggcompfin <- merge(aggcompbeme, indbetacomp, all.x=T, by = c("Year", "CompInd"))
 
 #final dataframe
-#aggcompfin
-```
-
-After examining our dataset, we have decided to subset such that we keep the first 53 years where there is more variability within our dataset.  
-```{r}
 aggcompfin$Year <- as.numeric(aggcompfin$Year)
-aggcompfin <- aggcompfin[aggcompfin$Year <= 53,]
 ```
 
 ###Graphics 
 
 First, we examine a boxplot between firm size and composite industry to examine if there are noticeable differences in the log  size between the composite industries. We would need to use a t-test of some sort to examine whether these differences were statistically significant. We added 1 inside the log because some of the firm sizes are technically zero, which causes an error given that we are taking the natural log. 
 ```{r}
-boxplot(log(df$size + 1)~df$CompInd, main = "Boxplot of Composite Industry and Size", col = c("red", "blue", "green", "yellow","orange", "magenta", "turquoise", "lime green"), ylab = "Log of Size", las = 2, cex.axis = .8) 
+boxplot(log(df$size + 1)~df$CompInd, main = "Boxplot of Composite Industry and Size", col = c("red", "blue", "green", "yellow","orange", "magenta", "turquoise", "lime green"), ylab = "Log of Size", xlab = 'Composite Industry', las = 2, cex.axis = .5) 
 ```
 Overall, the industries appear to be relatively similar and there are no observable skews within any of the industries. All of the industries also seem to be approximately normally distributed, but next, we will confirm if the data has a normal distribution within each composite industry.
 
-Using our new dataframe, we first examine the average returns per composite industry by year from 1926-1979.
+We first examine the average returns per composite industry by year from 1926-2014.
 ```{r}
 aggcompfin$CompInd <- as.factor(aggcompfin$CompInd)
-plot(aggcompfin$`Composite Returns` ~ aggcompfin$Year, main = "Scatterplot of Year versus Return 1926-1979", pch = 24, col = aggcompfin$CompInd, xlab = "Year", ylab = "Yearly Returns")
-legend("bottom", legend= levels(aggcompfin$CompInd), pch=16, cex = 0.6, col = c(1:9))
+plot(aggcompfin$`Composite Returns` ~ aggcompfin$Year, main = "Scatterplot of Year versus Return 1926-2014", pch = 24, col = aggcompfin$CompInd, xlab = "Year", ylab = "Yearly Returns")
+legend("topright", legend= levels(aggcompfin$CompInd), pch=16, cex = 0.6, col = c(1:9))
 # lines() - How do we add in lines
 ```
 Overall, returns seem relatively flat throughout the entire period. Given the number of composite industries, it is difficult to see any single trend in the graph. As such, we will have to run regression analyses by industry to verify if there are trends for each.
@@ -274,7 +251,7 @@ Now, we will examine graphs within specific composite industries to observe how 
 
 ```{r}
 #Making a new dataframe that has one value per composite industry
-single <- data.frame(Year = c(1:53), Composite_Returns_TMT = NA, Composite_Size_TMT = NA, Composite_BEME_Ratio_TMT = NA, Composite_Beta_TMT = NA, Composite_Returns_Com = NA, Composite_Size_Com = NA, Composite_BEME_Ratio_Com = NA, Composite_Beta_Com = NA)
+single <- data.frame(Year = c(1:88), Composite_Returns_TMT = NA, Composite_Size_TMT = NA, Composite_BEME_Ratio_TMT = NA, Composite_Beta_TMT = NA, Composite_Returns_Com = NA, Composite_Size_Com = NA, Composite_BEME_Ratio_Com = NA, Composite_Beta_Com = NA)
 for(i in 1:length(unique(aggcompfin$Year))){
   temp1 <- aggcompfin[aggcompfin$Year == i,]
   a <- tapply(temp1$`Composite Size`, temp1$CompInd, mean)
@@ -291,17 +268,17 @@ for(i in 1:length(unique(aggcompfin$Year))){
   single$Composite_Beta_Com[i] <- d[1]
 }
 
-barplot(single$Composite_BEME_Ratio_TMT, main = "Barplot of TMT BE/ME Ratio from 1926-1979", col = "blue", ylab = "Composite BE/ME for TMT")
-barplot(single$Composite_Returns_TMT, main = "Barplot of TMT Average Yearly Returns from 1926-1979", col = "green", ylab = "Composite Returns for TMT")
-barplot(single$Composite_Size_TMT, main = "Barplot of TMT Composite Size from 1926-1979", col = "green", ylab = "Composite Average Size for TMT")
+barplot(single$Composite_BEME_Ratio_TMT, main = "Barplot of TMT BE/ME Ratio from 1926-2014", col = "blue", ylab = "Composite BE/ME for TMT")
+barplot(single$Composite_Returns_TMT, main = "Barplot of TMT Average Yearly Returns from 1926-2014", col = "green", ylab = "Composite Returns for TMT")
+barplot(single$Composite_Size_TMT, main = "Barplot of TMT Composite Size from 1926-2014", col = "green", ylab = "Composite Average Size for TMT")
 ```
 We conclude from the three graphs that 1) TMT company valuations spiked in the 1940s, 2) Average yearly returns in the TMT industry were net positive from 1926-1979, and 3) the market value of TMT companies decreased during the Great Depression and subsequently grew from 1940s to 1970s.
 
 Now, we examine the same graphs for the Commodities industry. 
 ```{r}
-barplot(single$Composite_BEME_Ratio_Com, main = "Barplot of Commodities BE/ME Ratio from 1926-1979", col = "green", ylab = "Composite BE/ME for Commodities")
-barplot(single$Composite_Returns_Com, main = "Barplot of Commodities Composite Returns from 1926-1979", col = "green", ylab = "Composite Average Yearly Returns for Commodities")
-barplot(single$Composite_Size_Com, main = "Barplot of Commodities Size from 1926-1979", col = "green", ylab = "Composite Size for Commodities")
+barplot(single$Composite_BEME_Ratio_Com, main = "Barplot of Commodities BE/ME Ratio from 1926-2014", col = "green", ylab = "Composite BE/ME for Commodities")
+barplot(single$Composite_Returns_Com, main = "Barplot of Commodities Composite Returns from 1926-2014", col = "green", ylab = "Composite Average Yearly Returns for Commodities")
+barplot(single$Composite_Size_Com, main = "Barplot of Commodities Size from 1926-2014", col = "green", ylab = "Composite Size for Commodities")
 ```
 We conclude from the three graphs that 1) Commodities company valuations spiked in the 1930s before the worst of the Great Depression, 2) Average yearly returns in the Commodities industry were net positive from 1926-1979, and 3) the market value of Commodities companies grew consistently from 1940s to 1970s.
 
@@ -323,7 +300,6 @@ Finally, we examine the normal quantile plots for our composite industries to se
 qqPlot(aggcompfin$`Composite Returns`~aggcompfin$CompInd)
 qqPlot(aggcompfin$`Composite Size`~aggcompfin$CompInd)
 qqPlot(aggcompfin$`Composite BE/ME Ratio` ~ aggcompfin$CompInd)
-qqPlot(aggcompfin$`Composite Beta`~ aggcompfin$CompInd)
 ```
 [Write analysis and fix graph titles]
 
@@ -335,14 +311,14 @@ Because our data does not include any two-level categorical groups, we find it m
 boxplot(single$Composite_Returns_TMT, single$Composite_Returns_Com, ylab = "Composite Returns", main = "Average Yearly Composite Returns (TMT vs Commodities)", col = "green", names = c("TMT", "Commodities"))
 boxplot(single$Composite_Size_TMT, single$Composite_Size_Com, ylab = "Composite Size", main = "Average Yearly Composite Size (TMT vs Commodities)", col = "red", names = c("TMT", "Commodities"))
 boxplot(single$Composite_BEME_Ratio_TMT, single$Composite_BEME_Ratio_Com, ylab = "Composite BE/ME Ratio", main = "Composite BE/ME Ratio (TMT vs Commodities)", col = "blue", names = c("TMT", "Commodities"))
-boxplot(single$Composite_Beta_TMT, single$Composite_Beta_Com, ylab = "Composite Beta", main = "Composite Beta (TMT vs Commodities)", col = "orange", names = c("TMT", "Commodities"))
+#boxplot(single$Composite_Beta_TMT, single$Composite_Beta_Com, ylab = "Composite Beta", main = "Composite Beta (TMT vs Commodities)", col = "orange", names = c("TMT", "Commodities"))
 
 t.test(single$Composite_Returns_TMT, single$Composite_Returns_Com)
 t.test(single$Composite_Size_TMT, single$Composite_Size_Com)
 t.test(single$Composite_BEME_Ratio_TMT, single$Composite_BEME_Ratio_Com)
 # t.test(single$Composite_Beta_TMT, single$Composite_Beta_Com) - Does not work because data is essentially constant. Based on the boxplot, the Betas do appear to be different between the industries. 
 ```
-Based on the t-test, Composite Returns between TMT and Commodities are not statistically significantly different at any reasonable level of alpha. By contrast, size for the two industries is statistically significant at very low levels of alpha as the p-value is 0.0035. Based on the boxplot, it appears that TMT is larger than commodities for size. Finally, the BE/ME Ratio between the two industries is statistically significantly different at the 0.05 alpha level as the p-value is 0.008464. Based on the boxplot, the BE/ME Ratio for Commodities is larger than TMT. 
+Based on the t-test, Composite Returns between TMT and Commodities are not statistically significantly different at any reasonable level of alpha. By contrast, size for the two industries is statistically significant at alpha = 0.05 as the p-value is 0.04651. Based on the boxplot, it appears that TMT is larger than commodities for size. Finally, the BE/ME Ratio between the two industries is statistically significantly different at the 0.05 alpha level as the p-value is 0.02033. Based on the boxplot, the BE/ME Ratio for Commodities is larger than TMT. This makes intuitive sense because tech stocks are typically valued at higher multiples of their revenue because more future growth is priced in. 
 
 
 ```{r}
@@ -397,9 +373,9 @@ permCor(aggcompfin$`Composite Beta`, aggcompfin$`Composite Size`, n_samp = 10000
 ```
 Based on the permuted sample correlations, the actual correlation between composite beta and composite size appears to be significant at any reasonable level of alpha. 
 
-###Multiple Regressions
+###Regression Testing CAPM
 
-First, we will evaluate market beta as a predictor of average returns using the model {insert model with LaTex}. To best accomplish, we will perform cross sectional regressions to estimate gamma0 and gamma1, and then we will then test to see if the mean values for gamma0 and gamma1 are statistically significant from 0. This is essentially a test of the famous Capital Asset Pricing Model, or CAPM. An intercept (gamma0) statistically significantly different from 0 indicates that market beta (market risk) is not the only factor that can explain stock market retirns. A coefficient for market beta 
+As mentinoed in the introduction, CAPM is a model for returns that says the excess returns of a portfolio (returns greater than the risk free rate) depend solely on the amount of market risk associated with that portfolio. Market risk can be estimated by calculating a portfolio's beta with the market, as we have already done by taking the covariance of the market and each portfolio scaled by the standard deviation of each. Now, to test the CAPM we will use the model $R_{i} = \gamma _{0} + \gamma _{1}\beta _{i}$, to represent a single cross section of returns for all the industries $i$ in our data set. We will run this regression for each cross section and then estimate $\gamma _{0}$ and $\gamma _{1}$ from the means we get from each iteration of the cross sectional regression. We can then test the CAPM by testing whether the means for $\gamma _{0}$ and $\gamma _{1}$ are equal to 0 using a t test. If the returns are fully explained by market risk, or $\beta _{i}$, then $\gamma _{0}$ should be approximately equal to 0 (technically it should be equal to the risk free rate, but since that is so close to 0 we can approximate it as such for ease of calculation). This is because if a portfolio is compensated for reasons other than market risk, $\gamma _{0}$ will capture those other sources of return by being larger than 0. Therefore, we will reject the CAPM if $\gamma _{0}$ is statistically significantly different from 0. We will also test if $\gamma _{1}$ is significantly different from 0, because if market risk predicts returns then its coefficient ($\gamma _{1}$) should be different from 0.
 
 ```{r}
 intercepts <- c()
@@ -412,29 +388,35 @@ for (i in 1:length(unique(df$Year))){
   intercepts <- append(intercepts, as.double(lm(temp_df$returns ~ temp_df$beta)$coefficients[1]))
   coefficients <- append(coefficients, as.double(lm(temp_df$returns ~ temp_df$beta)$coefficients[2]))
 }
-hist(coefficients)
-hist(intercepts)
-mean(coefficients)
-sd(coefficients)
-mean(intercepts)
-sd(intercepts)
+
+hist(coefficients, main = 'Distribution of Gamma_1', xlab = 'Gamma_1')
+hist(intercepts, main = 'Distribution of Gamma_0', xlab = 'Gamma_0')
+means <- c(mean(intercepts), mean(coefficients))
+sds <- c(sd(intercepts), sd(coefficients))
+tstats <- c(mean(intercepts) / (sd(intercepts)/sqrt(length(intercepts))), mean(coefficients) / (sd(coefficients)/sqrt(length(coefficients))))
+results_table <- data.frame(c('Gamma_0', 'Gamma_1'), means, sds, tstats)
+names(results_table) <- c('Variable', 'Mean', 'SE', 't-stat')
+
+
+
+print('The following table contains the resulting means, standard errors, t statistics and P-values for Gamma_0 and Gamma_1')
+results_table
 ```
 
-Now, we will attempt to find the best model to predict returns, given the data. Some important things to note: measures of size and book equity to market equity will be lagged by 1 time step because that data would not have been available at the time of prediction. 
+From the table, we can see that our test clearly rejects the CAPM. At a significance level of alpha = 0.05, the critical value for a 2 sided test would be approximately 2, meaning a t stat of 5 for $\gamma _{0}$ means we reject the null that it is equal to 0, and therefore we reject that the CAPM fully explains the cross sectional returns. Similarly, we see that the t stat for $\gamma _{1}$ is much lower than the critical value of 2 (or even the critical value for a 1 sided test, which would be 1.645). Therefore, we fail to reject the null that $\gamma _{1}$ is different from 0. Again, this is evidence against the CAPM. 
+
+Now, we will attempt to find the best model to predict returns, given the data we have. This means we will use the industries, composite industries, BE/ME, and size measures in addition to beta and market returns. Some important things to note: measures of size and book equity to market equity will be lagged by 1 time step because that data would not have been available at the time of prediction. We should also note that when calculating beta, we used the entire sample of returns, which we did to get the most accurate measure of each industry's beta. However, that inevitably includes forward looking data, meaning that in practice the predictive power of beta will likely be lower out of sample. We will be doing a time series regression this time (as opposed to cross sectional), meaning that we won't do a seperate regression for each year. Instead, our aim will be to predict returns in any time period given the variables.
 
 ```{r}
-
-lagged <- df
-lagged$size <- shift(lagged$size)
-lagged
 na_free_df <- na.omit(df)
-na_free_df
-mod1 <- lm(na_free_df$returns ~ na_free_df$size + na_free_df$BEMERatio + na_free_df$Ind +  na_free_df$CompInd + na_free_df$Beta + na_free_df$mktret + na_free_df$RF + na_free_df$Mkt.RF)
-#  na_free_df$Ind +
-mod2 <- lm(na_free_df$returns ~ na_free_df$size + na_free_df$BEMERatio + na_free_df$CompInd +  na_free_df$Beta + na_free_df$mktret + na_free_df$RF)
+mod1 <- lm(na_free_df$returns ~ na_free_df$size + na_free_df$BEMERatio +  na_free_df$Beta + na_free_df$CompInd + na_free_df$Ind + na_free_df$size*na_free_df$Beta + na_free_df$size*na_free_df$BEMERatio + na_free_df$BEMERatio*na_free_df$Beta + na_free_df$CompInd*na_free_df$size)
+#  na_free_df$Ind + na_free_df$mktret + na_free_df$RF + na_free_df$Mkt.R
+mod1 <- lm(na_free_df$returns ~ na_free_df$size + na_free_df$CompInd + na_free_df$size*na_free_df$Beta + na_free_df$size*na_free_df$BEMERatio + na_free_df$BEMERatio*na_free_df$Beta)
+
+
+mod2 <- lm(na_free_df$returns ~ na_free_df$BEMERatio + na_free_df$CompInd + na_free_df$mktret + na_free_df$RF)
 
 summary(mod1)
-summary(mod2)
 ```
 
 
@@ -450,7 +432,7 @@ print("SD by Genre")
 print("Ratio of Max/Min Sample SD")
 round(max(sds)/min(sds),1)
 ```
-The ratio is 3.5. Thus, our assumption for ANOVA is not satisfied. We will continue with the ANOVA analysis, but we will also use non-parametric tests to see if the variances are the same across composite industries. Specifically, we believe it best to use the Kruskal-Wallace test as it makes no assumptions of normality within each group or that the variances be equal (have a ratio less than 2). We examined our normal quantile plots before, and saw that the data was relatively normally distributed, but not for all genres. Thus, Welch's ANOVA is not a solid choice in this scenario. 
+The ratio is 4.4. Thus, our assumption for ANOVA is not satisfied. We will continue with the ANOVA analysis, but we will also use non-parametric tests to see if the variances are the same across composite industries. Specifically, we believe it best to use the Kruskal-Wallace test as it makes no assumptions of normality within each group or that the variances be equal (have a ratio less than 2). We examined our normal quantile plots before, and saw that the data was relatively normally distributed, but not for all genres. Thus, Welch's ANOVA is not a solid choice in this scenario. 
 
 
 We begin with ANOVA:
@@ -466,10 +448,9 @@ plot(TukeyHSD(aov1), las=1)
 #Finally, we examine our residuals for the ANOVA model
 myResPlots2(aov1, label = "Size Composite Industry")
 ```
-*Analysis:* Our anova model shows that the mean composite size is statistically significantly different between composite industries given that the p-value is smaller than any reasonable value of alpha. The degrees of freedom reported by the test are what we expect - k (# of groups) - 1 degrees of freedom for composite industries. Moreover, the degrees of freedom for the residuals are what we expect: the number of observations - the number of groups. Examining the normal quantile plot we see that our errors are not normally distributed and the fits vs studentized residuals plot shows evidence of heteroskedasticity.
+*Analysis:* Our anova model shows that the mean composite size is statistically significantly different between composite industries given that the p-value is smaller than any reasonable value of alpha. The degrees of freedom reported by the test are what we expect - k (# of groups) - 1 degrees of freedom for composite industries. Moreover, the degrees of freedom for the residuals are what we expect: the number of observations - the number of groups. Examining the normal quantile plot we see that our errors are not normally distributed and the fits vs studentized residuals plot shows evidence of heteroskedasticity. We should therefore take the results of this test with a grain of salt because the assumptions for ANOVA were not suffuciently satisfied.
 
-[ADD IN ANALYSIS OF THE TUKEY COMPARISONS]
-
+Looking at the Tukey Comparisons, we can see that there are many pairs of industries that have statistically significantly different means. These pairs include (Consumer-Commodities), (Financials-Consumer), (Industrials-Consumer), (Healthcare-Consumer), (Other-Consumer), (TMT-Consumer), (Utilities-Consumer), and (TMT-Industrials).
 
 ```{r}
 #Now, let's see what transformation is suggested
@@ -504,7 +485,7 @@ plot(TukeyHSD(aov2), las=1)
 myResPlots2(aov2, label = "Size Composite Industry")
 ```
 *Analysis:* [ADD IN ANALYSIS OF THE TUKEY COMPARISONS]
-The errors of our new ANOVA model still do not appear normally distributed, but the fits vs residuals plot shows less evidence of heteroskedasticity. 
+The errors of our new ANOVA model still do not appear normally distributed, but the fits vs residuals plot shows less evidence of heteroskedasticity. This is an improvement from the prior model.
 
 Before we continue with our non-parametric tests, we will use Bartlett's and Levene's test to see if variances are the equal. 
 ```{r}
