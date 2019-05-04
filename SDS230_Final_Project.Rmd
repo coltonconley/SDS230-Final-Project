@@ -24,6 +24,7 @@ library(olsrr)
 library(corrplot)
 library(readxl)
 library(PerformanceAnalytics)
+library(boot)
 source("http://www.reuningscherer.net/s&ds230/Rfuncs/regJDRS.txt")
 ```
 
@@ -329,20 +330,32 @@ results_table
 
 First, we printed a histogram of $\gamma _{0}$ to make sure the distribution appeared symmetrical and approximately normally distributed (we need this assumption for the t test). It does appear to From the table, we can see that our test clearly rejects the CAPM. At a significance level of alpha = 0.05, the critical value for a 2 sided test would be approximately 2, meaning a t stat of 5 for $\gamma _{0}$ means we reject the null that it is equal to 0, and therefore we reject that the CAPM fully explains the cross sectional returns. Similarly, we see that the t stat for $\gamma _{1}$ is much lower than the critical value of 2 (or even the critical value for a 1 sided test, which would be 1.645). Therefore, we fail to reject the null that $\gamma _{1}$ is different from 0. Again, this is evidence against the CAPM. 
 
-Now, we will attempt to find the best model to predict returns, given the data we have. This means we will use the industries, composite industries, BE/ME, and size measures in addition to beta and market returns. Some important things to note: measures of size and book equity to market equity will be lagged by 1 time step because that data would not have been available at the time of prediction. We should also note that when calculating beta, we used the entire sample of returns, which we did to get the most accurate measure of each industry's beta. However, that inevitably includes forward looking data, meaning that in practice the predictive power of beta will likely be lower out of sample. We will be doing a time series regression this time (as opposed to cross sectional), meaning that we won't do a seperate regression for each year. Instead, our aim will be to predict returns in any time period given the variables.
+Just to be sure of our results, we will now create a bootstrapped confidence interval for the true mean of $\gamma _{0}$.
+```{r}
+samp_mean <- function(x, i) {
+  mean(x[i])
+}
+results <- boot(intercepts, statistic=samp_mean, 
+   R=1000)
+# get 95% confidence interval 
+boot.ci(results, type="bca")
+```
+We can see here too that 0 is not contained in the bootstrapped confidence interval for $\gamma _{0}$, confirming what we observed in the t test earlier.
+
+Now, we will attempt to find the best model to predict returns, given the data we have. This means we will use the industries, composite industries, BE/ME, and size measures in addition to beta. Some important things to note: measures of size and book equity to market equity will be lagged by 1 time step because that data would not have been available at the time of prediction. We should also note that when calculating beta, we used the entire sample of returns, which we did to get the most accurate measure of each industry's beta. However, that inevitably includes forward looking data, meaning that in practice the predictive power of beta will likely be lower out of sample. We will be doing a time series regression this time (as opposed to cross sectional), meaning that we won't do a seperate regression for each year. Instead, our aim will be to predict returns in any time period given the variables. Note: For space purposes, only the final model in the stepwise regression will be printed.
 
 ```{r}
-na_free_df <- na.omit(df)
-mod1 <- lm(na_free_df$returns ~ na_free_df$size + na_free_df$BEMERatio +  na_free_df$Beta + na_free_df$CompInd + na_free_df$Ind + na_free_df$size*na_free_df$Beta + na_free_df$size*na_free_df$BEMERatio + na_free_df$BEMERatio*na_free_df$Beta + na_free_df$CompInd*na_free_df$size)
-#  na_free_df$Ind + na_free_df$mktret + na_free_df$RF + na_free_df$Mkt.R
-mod1 <- lm(na_free_df$returns ~ na_free_df$size + na_free_df$CompInd + na_free_df$size*na_free_df$Beta + na_free_df$size*na_free_df$BEMERatio + na_free_df$BEMERatio*na_free_df$Beta)
-
-
-mod2 <- lm(na_free_df$returns ~ na_free_df$BEMERatio + na_free_df$CompInd + na_free_df$mktret + na_free_df$RF)
-
-summary(mod1)
+data <- na.omit(df)
+#mod1 <- lm(data$returns ~ data$size + data$BEMERatio +  data$Beta + data$CompInd + data$Ind + data$size*data$Beta + data$size*data$BEMERatio + data$BEMERatio*data$Beta + data$CompInd*data$size, data=data)
+#ols_step_backward_p(mod1, prem = 0.05)
+mod2 <- lm(data$returns ~ data$CompInd + data$BEMERatio*data$Beta, data=data)
+summary(mod2)
 ```
-include residual plot
+Using Backwards Stepwise regression, we eliminate the industry categorical variable, size, and all interaction terms except for the interaction between BEMERatio and Beta (this is why BEME and Beta are included despite them being insignificant on their own. The model automatically includes them because we include the interaction). There are also some composite industries that aren't significant, but because there are some significant industries within the composite industry categorical variable we have to include them all in the regression.
+```{r, include=FALSE}
+myResPlots2(mod2)
+```
+Looking at the residual plots, we see that the residuals are approximately symmetric however there are some outliers. The residuals also aren't perfectly normally distributed as we can see from the quantile plot, suggesting that our fit isn't great and we should interpret model results keeping this in mind.
 
 ###ANOVA, Logit, Multinomial, or Webscraping 
 For this portion of the project, we will use ANOVA to examine the differences of composite industry over composite size. We are curious about the pairs of differences for Composite Industry with regards to the Composite Size variable. Thus, our ANOVA will focus on the composite size variable, although we may choose another one for some 
@@ -376,30 +389,26 @@ Because size is measured on a dollar scale, we find it best to use a log transfo
 #Now, let's see what transformation is suggested
 #trans1 <- boxCox(aov1)
 #trans1$x[which.max(trans1$y)]
-
 #The suggested transformation is a log. Let's see what happens to our ANOVA model if we use the transformation. The transformation makes sense given that size is on a dollar scale.
 transsize <- log(aggcompfin$`Composite Size`)
 
 print("SD by Genre")
 (sds <- tapply(transsize, aggcompfin$CompInd, sd))
-
 print("Ratio of Max/Min Sample SD")
 round(max(sds)/min(sds),1)
-
 #Now the ratio is less than 2 and our assumption for ANOVA is satisfied. We will poroceed with the transformed model
 aov2 <- aov(transsize ~ aggcompfin$CompInd)
 summary(aov2)
 ```
 *Analysis:* Our second model, using our transformed model in which we took the log of size, shows statistically significant differences between composite industries given that the p-value is lower than any reasonable alpha. 
 
-
 ```{r}
 #pairwise.t.test(transsize, aggcompfin$CompInd) 
-#Fix the labels on the side
 #TukeyHSD(aov2)
 par(mar=c(5,11,4,1))
-plot(TukeyHSD(aov2), las=1)
-
+plot(TukeyHSD(aov2), las=1, cex.axis = 0.8)
+```
+```{r, include=FALSE}
 myResPlots2(aov2, label = "Size Composite Industry")
 ```
 
