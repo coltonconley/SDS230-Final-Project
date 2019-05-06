@@ -1,6 +1,7 @@
 ---
 title: "SDS230_Final_Project"
 output:
+  word_document: default
   html_document: default
 ---
 
@@ -37,23 +38,39 @@ returns <- read_excel("Average Weighted Returns Monthly.xlsx")
 rf <- read.csv("RP-RF.csv")
 ```
 The variables we plan to use and create in this dataset are: 
-* Year
-* Industry Percent Return - The percent return on investment for a given industry in a given year 
-* Industry (the 49 individual industries as well as composite industries which we will create later during the data cleaning process)
-* Average Firm Size - The average market capitalization value of a firm in a given year represented in millions of dollars 
-* Book Equity / Market Equity - 
-* Market Return - Defined as "The return on the overall theoretical market portfolio which includes all assets and having the portfolio weighted for value."
-* Risk Free Rate - Defined as "the rate of return a hypothetical investment with no risk of financial loss"
-* Beta - Defined as "a measure of a stock's volatility in relation to the market" The formula for Beta is: 
+
+**Year**
+
+**Industry Percent Return** - The percent return on investment for a given industry in a given year.
+
+**Industry** - the 49 individual industries.
+
+**Composite Industry** - larger industry category that aggregates the 49 individual industries (e.g. TMT, Healthcare...).
+
+**Average Firm Size** - The average market capitalization value of a firm in a given year represented in millions of dollars.
+
+**Book Equity / Market Equity** - a measure of a company's asset value on the books relative to market valuation.
+
+**Market Return** - Defined as "The return on the overall theoretical market portfolio which includes all assets and having the portfolio 
+weighted for value."
+
+**Risk Free Rate** - Defined as "the rate of return a hypothetical investment with no risk of financial loss".
+
+**Beta** - Defined as "a measure of a stock's volatility in relation to the market" The formula for Beta is: 
 
 $\beta_i = \frac{Cov(R_e, R_m)}{Var(R_m)}$
-where $R_e$ = the return on an individual portfolio and $R_m$ = the market return
-* Composite Returns 
-* Composite BE/ME Ratio
-* Composite Beta
-* Composte Size 
 
-The data sets we collected were formatted in such a way that required extensive data cleaning before beginning our analysis. 
+where $R_e$ = the return on an individual portfolio and $R_m$ = the market return.
+
+**Composite Returns** - The percent return on investment for a given composite industry (larger industry catagory) in a given year.
+
+**Composite BE/ME Ratio** - a measure of a company's asset value on the books relative to market valuation by composite industry.
+
+**Composite Beta** - the composite industry average of "volatility in relation to the market."
+
+**Composite Size** - the average market capitalization of firms within a composite industry over a year.
+
+The data sets we collected were formatted in such a way that required extensive data cleaning before beginning our analysis. Below are the steps we took:
 
 **First**, we needed to resolve cases of incomplete data across all of our data sets. 
 
@@ -98,7 +115,7 @@ total_return <- function(returns_array){
 ```{r}
 size$Year <- substr(size$Year, 1, 4) #Strip off all ofthe month values 
 size <- aggregate(.~Year, data = size, mean,  na.action = na.pass)
-returns$Year <- substr(returns$Year, 1, 4) #Ask what is going on here
+returns$Year <- substr(returns$Year, 1, 4)
 returns <- aggregate(.~Year, data = returns, total_return, na.action = na.pass)
 rf$Year <- substr(rf$Year,1,4)
 rf <- aggregate(.~Year, data= rf, total_return,  na.action = na.pass)
@@ -207,7 +224,7 @@ plot(aggcompfin$`Composite Returns` ~ aggcompfin$Year, main = "Scatterplot of Ye
 legend("topright", legend= levels(aggcompfin$CompInd), pch=16, cex = 0.6, col = c(1:9))
 ```
 
-Overall, returns seem relatively flat throughout the entire period. Given the number of composite industries, it is difficult to see any single trend in the graph. As such, we will have to run regression analyses by industry to verify if there are trends for each.
+Overall, there seems to be a lot of variance in the returns throughout the entire period. Given the number of composite industries, it is difficult to see any single trend in the graph. As such, we will have to run regression analyses by industry to verify if there are trends for each.
 
 Now, we will compare specific composite industries to observe how our continuous variables have changed throughout time. We have elected two composite industries at random (TMT and Commodities) in order to limit the number of graphs we are making. We will also limit the number of graphs we print for space purposes. 
 
@@ -425,11 +442,12 @@ kruskal.test(transsize ~ aggcompfin$CompInd)
 #Comparing to One-Way ANOVA
 summary.aov(aov(transsize ~ aggcompfin$CompInd))
 ```
-*Analysis:*The chi-squared value for the Kruskal-Wallis test is high and the p-value is small enough to reject the null hypothesis at any reasonable level of alpha meaning that at least one group median is different from others. As stated earlier, The Kurskal-Wallis test is a good choice here given that the results are statistically significant and our original data is not normally distributed within each genre and the variances are not the same between groups (based on the results from Levene and Bartlette tests). 
+*Analysis:* The chi-squared value for the Kruskal-Wallis test is high and the p-value is small enough to reject the null hypothesis at any reasonable level of alpha meaning that at least one group median is different from others. As stated earlier, The Kurskal-Wallis test is a good choice here given that the results are statistically significant and our original data is not normally distributed within each genre and the variances are not the same between groups (based on the results from Levene and Bartlette tests). 
 
 ###Final Comments 
-  At the beginning of this project we set out with two main goals: to explore the variability in returns and characteristics of different industries over time, and to test the CAPM. Regarding the first objective, we observed that returns were actually very similar for most industries in the long run. From our tests, we didn't see much statistically dignificant difference in the mean returns since 1926 of each industry. However, we did notice variablility in some of the other metrics, such as size or BE/ME. For example, we noticed that TMT companies have a statistically significantly lower BE/ME ratio than commodities, meaning that the market gives them a higher valuation relative to their tangible assets. We also noticed that over time, certain companies, expecially technology companies, tend to be larger in market value than firms in other sectors.
-  We also rejected the CAPM by exploring whether market risk was able to explain the yearly cross section of industry returns. We found that there were unexplained sources of return in the model, meaning that either markets do not efficiently compensate investors for the risk they take or there are other sources of risk we did not include in the model (technically one could also argue that our estimates for beta were wrong, but it is hard to imagine that a small amount of estimation error could cause a t stat of 5). Either way, we showed with a high degree of statistical certainty that CAPM doesn't work. 
+At the beginning of this project we set out with two main goals: to explore the variability in returns and characteristics of different industries over time, and to test the CAPM. Regarding the first objective, we observed that returns were actually very similar for most industries in the long run. From our tests, we didn't see much statistically dignificant difference in the mean returns since 1926 of each industry. However, we did notice variablility in some of the other metrics, such as size or BE/ME. For example, we noticed that TMT companies have a statistically significantly lower BE/ME ratio than commodities, meaning that the market gives them a higher valuation relative to their tangible assets. We also noticed that over time, certain companies, especially technology companies, tend to be larger in market value than firms in other sectors.
+
+We also rejected the CAPM by exploring whether market risk was able to explain the yearly cross section of industry returns. We found that there were unexplained sources of return in the model, meaning that either markets do not efficiently compensate investors for the risk they take or there are other sources of risk we did not include in the model (technically one could also argue that our estimates for beta were wrong, but it is hard to imagine that a small amount of estimation error could cause a t stat of 5). Either way, we showed with a high degree of statistical certainty that CAPM doesn't work.
 
 
 
