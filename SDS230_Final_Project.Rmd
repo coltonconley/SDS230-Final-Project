@@ -268,8 +268,11 @@ We conclude from the three graphs that 1) Commodities company valuations spiked 
 Because our data does not include any two-level categorical groups, we find it more useful to examine the correlations between our different continous composite variables which we made graphs for above. However, since our new dataframe only has two industries, we can use a basic t-test to compare the four composite variables. Again, we removed the box plots to save space.
 ```{r}
 t.test(single$Composite_Returns_TMT, single$Composite_Returns_Com)
-#t.test(single$Composite_Size_TMT, single$Composite_Size_Com)
-#t.test(single$Composite_BEME_Ratio_TMT, single$Composite_BEME_Ratio_Com)
+#only outputting the p-value for the next two t-tests for the sake of space
+t2 <- t.test(single$Composite_Size_TMT, single$Composite_Size_Com)$p.value
+t2
+t3 <- t.test(single$Composite_BEME_Ratio_TMT, single$Composite_BEME_Ratio_Com)$p.value
+t3
 ```
 Based on the t-test, Composite Returns between TMT and Commodities are not statistically significantly different at any reasonable level of alpha. By contrast, size for the two industries is statistically significant at alpha = 0.05 as the p-value is 0.04651. Based on the boxplot, it appears that TMT is larger than commodities for size. Finally, the BE/ME Ratio between the two industries is statistically significantly different at the 0.05 alpha level as the p-value is 0.02033. Based on the boxplot, the BE/ME Ratio for Commodities is larger than TMT. This makes intuitive sense because tech stocks are typically valued at higher multiples of their revenue because more future growth is priced in. 
 
