@@ -1,8 +1,8 @@
 ---
 title: "SDS230_Final_Project"
 output:
-  word_document: default
   html_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -258,7 +258,7 @@ We conclude from the three graphs that 1) TMT company valuations spiked in the 1
 Now, we examine the same graphs for the Commodities industry. 
 ```{r}
 #barplot(single$Composite_BEME_Ratio_Com, main = "Barplot of Commodities BE/ME Ratio from 1926-2014", col = "green", ylab = "Composite BE/ME for Commodities")
-barplot(single$Composite_Returns_Com, main = "Barplot of Commodities Composite Returns from 1926-2014", col = "green", ylab = "Composite Average Yearly Returns for Commodities")
+barplot(single$Composite_Returns_Com, main = "Barplot of Commodities Composite Returns from 1926-2014", col = "green", ylab = "Composite Avg Yearly Returns for Commodities")
 #barplot(single$Composite_Size_Com, main = "Barplot of Commodities Size from 1926-2014", col = "green", ylab = "Composite Size for Commodities")
 ```
 We conclude from the three graphs that 1) Commodities company valuations spiked in the 1930s before the worst of the Great Depression, 2) Average yearly returns in the Commodities industry were net positive from 1926-2014, and 3) the market value of Commodities companies grew consistently from 1940s to 2010s.
@@ -279,8 +279,8 @@ Based on the t-test, Composite Returns between TMT and Commodities are not stati
 ```{r}
 #Now we check for significant correlations at the 95% level and plot them. 
 sigcorr <- cor.mtest(aggcompfin[,c(9, 11:14)], conf.level = .95)
-corrplot.mixed(cor(aggcompfin[,c(9, 11:14)]), lower.col="black", upper = "ellipse", tl.col = "black", number.cex=.7, 
-               order = "hclust", tl.pos = "lt", tl.cex=.7, p.mat = sigcorr$p, sig.level = .05) #Adjust the top axis text
+corrplot.mixed(cor(aggcompfin[,c(9, 11:14)]), lower.col="black", upper = "ellipse", tl.col = "black", number.cex=.7, order = "hclust", tl.pos = "lt", tl.cex=.7, p.mat = sigcorr$p, sig.level = .05)
+#Adjust the top axis text
 ```
 Overall, the correlations between variables are relatively low. The highest correlation is between market return and composite returns for all of the industries. Composite Beta and Composite BE/ME ratio both have a low negative correlation with composite size, but the correlation is statistically significant at the 95% level. Other than these several correlations, the others are too low to hold much interpretation. We will proceed by analyzing these three correlations through bootstraps and permutation tests. 
 
