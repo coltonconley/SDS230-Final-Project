@@ -285,8 +285,8 @@ corrplot.mixed(cor(aggcompfin[,c(9, 11:14)]), lower.col="black", upper = "ellips
 Overall, the correlations between variables are relatively low. The highest correlation is between market return and composite returns for all of the industries. Composite Beta and Composite BE/ME ratio both have a low negative correlation with composite size, but the correlation is statistically significant at the 95% level. Other than these several correlations, the others are too low to hold much interpretation. We will proceed by analyzing these three correlations through bootstraps and permutation tests. 
 
 ###Permutation Test 
-We now conduct a permutation test between composite industry return and composite BE/ME in order to show a non-zero statistically significant correlation between these two variables. The code is not included to save space.
-```{r, include=FALSE}
+We now conduct a permutation test between composite industry return and composite BE/ME in order to show a non-zero statistically significant correlation between these two variables. 
+```{r}
 myCor <- function(x,y){
   plot(x,y,pch=19, col="red", xlab = "Composite BE/ME", ylab = "Composite Industry Return")
   mtext(paste("Sample Correlation =", round(cor(x,y),3)), cex=1.2)
@@ -315,7 +315,7 @@ permCor <- function(x, y, n_samp = 10000, plot = T){
 myCor(aggcompfin$`Composite BE/ME Ratio`, aggcompfin$`Composite Returns`)
 permCor(aggcompfin$`Composite BE/ME Ratio`, aggcompfin$`Composite Returns`, n_samp = 10000, plot = T)
 ```
-Based on the permuted sample correlations, the actual correlation between composite industry return and composite BE/ME appears to be significant at any reasonable level of alpha. [add small analysis]
+The sample correlation returned 0.266, which leads us to believe that there is an extremely weak, positive, linear correlation between composite industry return and composite BE/ME. The permutation test on the other hand, returned a permuted p-value of 0, which allows us to conclude that the actual correlation between composite industry return and composite BE/ME appears to be significant at any reasonable level of alpha. 
 
 ###Regression Testing CAPM and Bootstrap
 As mentinoed in the introduction, CAPM is a model for returns that says the excess returns of a portfolio (returns greater than the risk free rate) depend solely on the amount of market risk associated with that portfolio. Market risk can be estimated by calculating a portfolio's beta with the market, as we have already done by taking the covariance of the market and each portfolio scaled by the standard deviation of each. Now, to test the CAPM we will use the model $R_{i} = \gamma _{0} + \gamma _{1}\beta _{i}$, to represent a single cross section of returns for all the industries $i$ in our data set. We will run this regression for each cross section and then estimate $\gamma _{0}$ and $\gamma _{1}$ from the means we get from each iteration of the cross sectional regression. We can then test the CAPM by testing whether the means for $\gamma _{0}$ and $\gamma _{1}$ are equal to 0 using a t test. If the returns are fully explained by market risk, or $\beta _{i}$, then $\gamma _{0}$ should be approximately equal to 0 (technically it should be equal to the risk free rate, but since that is so close to 0 we can approximate it as such for ease of calculation). This is because if a portfolio is compensated for reasons other than market risk, $\gamma _{0}$ will capture those other sources of return by being larger than 0. Therefore, we will reject the CAPM if $\gamma _{0}$ is statistically significantly different from 0. We will also test if $\gamma _{1}$ is significantly different from 0, because if market risk predicts returns then its coefficient ($\gamma _{1}$) should be different from 0.
