@@ -253,7 +253,7 @@ for(i in 1:length(unique(aggcompfin$Year))){
 barplot(single$Composite_Returns_TMT, main = "Barplot of TMT Average Yearly Returns from 1926-2014", col = "green", ylab = "Composite Returns for TMT")
 #barplot(single$Composite_Size_TMT, main = "Barplot of TMT Composite Size from 1926-2014", col = "green", ylab = "Composite Average Size for TMT")
 ```
-We conclude from the three graphs that 1) TMT company valuations spiked in the 1940s, 2) Average yearly returns in the TMT industry were net positive from 1926-1979, and 3) the market value of TMT companies decreased during the Great Depression and subsequently grew from 1940s to 1970s.
+We conclude from the three graphs that 1) TMT company valuations spiked in the 1940s, 2) Average yearly returns in the TMT industry were net positive from 1926-2014, and 3) the market value of TMT companies decreased during the Great Depression and subsequently grew from 1940s to 1970s.
 
 Now, we examine the same graphs for the Commodities industry. 
 ```{r}
@@ -418,7 +418,7 @@ summary(aov2)
 #pairwise.t.test(transsize, aggcompfin$CompInd) 
 #TukeyHSD(aov2)
 par(mar=c(5,11,4,1))
-plot(TukeyHSD(aov2), las=1, cex.axis = 0.8)
+plot(TukeyHSD(aov2), las=1, cex.axis = 0.5)
 ```
 ```{r, include=FALSE}
 myResPlots2(aov2, label = "Size Composite Industry")
