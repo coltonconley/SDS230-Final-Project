@@ -2,6 +2,7 @@
 title: "SDS230_Final_Project"
 output:
   html_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -37,23 +38,39 @@ returns <- read_excel("Average Weighted Returns Monthly.xlsx")
 rf <- read.csv("RP-RF.csv")
 ```
 The variables we plan to use and create in this dataset are: 
-* Year
-* Industry Percent Return - The percent return on investment for a given industry in a given year 
-* Industry (the 49 individual industries as well as composite industries which we will create later during the data cleaning process)
-* Average Firm Size - The average market capitalization value of a firm in a given year represented in millions of dollars 
-* Book Equity / Market Equity - 
-* Market Return - Defined as "The return on the overall theoretical market portfolio which includes all assets and having the portfolio weighted for value."
-* Risk Free Rate - Defined as "the rate of return a hypothetical investment with no risk of financial loss"
-* Beta - Defined as "a measure of a stock's volatility in relation to the market" The formula for Beta is: 
+
+**Year**
+
+**Industry Percent Return** - The percent return on investment for a given industry in a given year.
+
+**Industry** - the 49 individual industries.
+
+**Composite Industry** - larger industry category that aggregates the 49 individual industries (e.g. TMT, Healthcare...).
+
+**Average Firm Size** - The average market capitalization value of a firm in a given year represented in millions of dollars.
+
+**Book Equity / Market Equity** - a measure of a company's asset value on the books relative to market valuation.
+
+**Market Return** - Defined as "The return on the overall theoretical market portfolio which includes all assets and having the portfolio 
+weighted for value."
+
+**Risk Free Rate** - Defined as "the rate of return a hypothetical investment with no risk of financial loss".
+
+**Beta** - Defined as "a measure of a stock's volatility in relation to the market" The formula for Beta is: 
 
 $\beta_i = \frac{Cov(R_e, R_m)}{Var(R_m)}$
-where $R_e$ = the return on an individual portfolio and $R_m$ = the market return
-* Composite Returns 
-* Composite BE/ME Ratio
-* Composite Beta
-* Composte Size 
 
-The data sets we collected were formatted in such a way that required extensive data cleaning before beginning our analysis. 
+where $R_e$ = the return on an individual portfolio and $R_m$ = the market return.
+
+**Composite Returns** - The percent return on investment for a given composite industry (larger industry catagory) in a given year.
+
+**Composite BE/ME Ratio** - a measure of a company's asset value on the books relative to market valuation by composite industry.
+
+**Composite Beta** - the composite industry average of "volatility in relation to the market."
+
+**Composite Size** - the average market capitalization of firms within a composite industry over a year.
+
+The data sets we collected were formatted in such a way that required extensive data cleaning before beginning our analysis. Below are the steps we took:
 
 **First**, we needed to resolve cases of incomplete data across all of our data sets. 
 
@@ -77,7 +94,7 @@ returns[returns == -99.99] <- NA
 rf[rf == -99.99] <- NA
 ```
 
-Next, we will reformat the year variable to include only the year as oppossed to year-month while finding the yearly averages for the "BEME" and "size" dataframes, while fining total yearly return for the "returns" dataframe. We then adjust the dataframes so the years line up correctly. 
+Next, we will reformat the year variable to include only the year as oppossed to year-month while finding the yearly averages for the "BEME" and "size" dataframes, while finding total yearly return for the "returns" dataframe. We then adjust the dataframes so the years line up correctly. 
 ```{r, include=FALSE}
 total_return <- function(returns_array){
   final_return <- 1
@@ -98,7 +115,7 @@ total_return <- function(returns_array){
 ```{r}
 size$Year <- substr(size$Year, 1, 4) #Strip off all ofthe month values 
 size <- aggregate(.~Year, data = size, mean,  na.action = na.pass)
-returns$Year <- substr(returns$Year, 1, 4) #Ask what is going on here
+returns$Year <- substr(returns$Year, 1, 4)
 returns <- aggregate(.~Year, data = returns, total_return, na.action = na.pass)
 rf$Year <- substr(rf$Year,1,4)
 rf <- aggregate(.~Year, data= rf, total_return,  na.action = na.pass)
@@ -207,7 +224,7 @@ plot(aggcompfin$`Composite Returns` ~ aggcompfin$Year, main = "Scatterplot of Ye
 legend("topright", legend= levels(aggcompfin$CompInd), pch=16, cex = 0.6, col = c(1:9))
 ```
 
-Overall, returns seem relatively flat throughout the entire period. Given the number of composite industries, it is difficult to see any single trend in the graph. As such, we will have to run regression analyses by industry to verify if there are trends for each.
+Overall, there seems to be a lot of variance in the returns throughout the entire period. Given the number of composite industries, it is difficult to see any single trend in the graph. As such, we will have to run regression analyses by industry to verify if there are trends for each.
 
 Now, we will compare specific composite industries to observe how our continuous variables have changed throughout time. We have elected two composite industries at random (TMT and Commodities) in order to limit the number of graphs we are making. We will also limit the number of graphs we print for space purposes. 
 
@@ -236,12 +253,12 @@ for(i in 1:length(unique(aggcompfin$Year))){
 barplot(single$Composite_Returns_TMT, main = "Barplot of TMT Average Yearly Returns from 1926-2014", col = "green", ylab = "Composite Returns for TMT")
 #barplot(single$Composite_Size_TMT, main = "Barplot of TMT Composite Size from 1926-2014", col = "green", ylab = "Composite Average Size for TMT")
 ```
-We conclude from the three graphs that 1) TMT company valuations spiked in the 1940s, 2) Average yearly returns in the TMT industry were net positive from 1926-1979, and 3) the market value of TMT companies decreased during the Great Depression and subsequently grew from 1940s to 1970s.
+We conclude from the three graphs that 1) TMT company valuations spiked in the 1940s, 2) Average yearly returns in the TMT industry were net positive from 1926-2014, and 3) the market value of TMT companies decreased during the Great Depression and subsequently grew from 1940s to 1970s.
 
 Now, we examine the same graphs for the Commodities industry. 
 ```{r}
 #barplot(single$Composite_BEME_Ratio_Com, main = "Barplot of Commodities BE/ME Ratio from 1926-2014", col = "green", ylab = "Composite BE/ME for Commodities")
-barplot(single$Composite_Returns_Com, main = "Barplot of Commodities Composite Returns from 1926-2014", col = "green", ylab = "Composite Average Yearly Returns for Commodities")
+barplot(single$Composite_Returns_Com, main = "Barplot of Commodities Composite Returns from 1926-2014", col = "green", ylab = "Composite Avg Yearly Returns for Commodities")
 #barplot(single$Composite_Size_Com, main = "Barplot of Commodities Size from 1926-2014", col = "green", ylab = "Composite Size for Commodities")
 ```
 We conclude from the three graphs that 1) Commodities company valuations spiked in the 1930s before the worst of the Great Depression, 2) Average yearly returns in the Commodities industry were net positive from 1926-2014, and 3) the market value of Commodities companies grew consistently from 1940s to 2010s.
@@ -251,22 +268,25 @@ We conclude from the three graphs that 1) Commodities company valuations spiked 
 Because our data does not include any two-level categorical groups, we find it more useful to examine the correlations between our different continous composite variables which we made graphs for above. However, since our new dataframe only has two industries, we can use a basic t-test to compare the four composite variables. Again, we removed the box plots to save space.
 ```{r}
 t.test(single$Composite_Returns_TMT, single$Composite_Returns_Com)
-#t.test(single$Composite_Size_TMT, single$Composite_Size_Com)
-#t.test(single$Composite_BEME_Ratio_TMT, single$Composite_BEME_Ratio_Com)
+#only outputting the p-value for the next two t-tests for the sake of space
+t2 <- t.test(single$Composite_Size_TMT, single$Composite_Size_Com)$p.value
+t2
+t3 <- t.test(single$Composite_BEME_Ratio_TMT, single$Composite_BEME_Ratio_Com)$p.value
+t3
 ```
 Based on the t-test, Composite Returns between TMT and Commodities are not statistically significantly different at any reasonable level of alpha. By contrast, size for the two industries is statistically significant at alpha = 0.05 as the p-value is 0.04651. Based on the boxplot, it appears that TMT is larger than commodities for size. Finally, the BE/ME Ratio between the two industries is statistically significantly different at the 0.05 alpha level as the p-value is 0.02033. Based on the boxplot, the BE/ME Ratio for Commodities is larger than TMT. This makes intuitive sense because tech stocks are typically valued at higher multiples of their revenue because more future growth is priced in. 
 
 ```{r}
 #Now we check for significant correlations at the 95% level and plot them. 
 sigcorr <- cor.mtest(aggcompfin[,c(9, 11:14)], conf.level = .95)
-corrplot.mixed(cor(aggcompfin[,c(9, 11:14)]), lower.col="black", upper = "ellipse", tl.col = "black", number.cex=.7, 
-               order = "hclust", tl.pos = "lt", tl.cex=.7, p.mat = sigcorr$p, sig.level = .05) #Adjust the top axis text
+corrplot.mixed(cor(aggcompfin[,c(9, 11:14)]), lower.col="black", upper = "ellipse", tl.col = "black", number.cex=.7, order = "hclust", tl.pos = "lt", tl.cex=.7, p.mat = sigcorr$p, sig.level = .05)
+#Adjust the top axis text
 ```
 Overall, the correlations between variables are relatively low. The highest correlation is between market return and composite returns for all of the industries. Composite Beta and Composite BE/ME ratio both have a low negative correlation with composite size, but the correlation is statistically significant at the 95% level. Other than these several correlations, the others are too low to hold much interpretation. We will proceed by analyzing these three correlations through bootstraps and permutation tests. 
 
 ###Permutation Test 
-We now conduct a permutation test between composite industry return and composite BE/ME in order to show a non-zero statistically significant correlation between these two variables. The code is not included to save space.
-```{r, include=FALSE}
+We now conduct a permutation test between composite industry return and composite BE/ME in order to show a non-zero statistically significant correlation between these two variables. 
+```{r}
 myCor <- function(x,y){
   plot(x,y,pch=19, col="red", xlab = "Composite BE/ME", ylab = "Composite Industry Return")
   mtext(paste("Sample Correlation =", round(cor(x,y),3)), cex=1.2)
@@ -295,7 +315,7 @@ permCor <- function(x, y, n_samp = 10000, plot = T){
 myCor(aggcompfin$`Composite BE/ME Ratio`, aggcompfin$`Composite Returns`)
 permCor(aggcompfin$`Composite BE/ME Ratio`, aggcompfin$`Composite Returns`, n_samp = 10000, plot = T)
 ```
-Based on the permuted sample correlations, the actual correlation between composite industry return and composite BE/ME appears to be significant at any reasonable level of alpha. [add small analysis]
+The sample correlation returned 0.266, which leads us to believe that there is an extremely weak, positive, linear correlation between composite industry return and composite BE/ME. The permutation test on the other hand, returned a permuted p-value of 0, which allows us to conclude that the actual correlation between composite industry return and composite BE/ME appears to be significant at any reasonable level of alpha. 
 
 ###Regression Testing CAPM and Bootstrap
 As mentinoed in the introduction, CAPM is a model for returns that says the excess returns of a portfolio (returns greater than the risk free rate) depend solely on the amount of market risk associated with that portfolio. Market risk can be estimated by calculating a portfolio's beta with the market, as we have already done by taking the covariance of the market and each portfolio scaled by the standard deviation of each. Now, to test the CAPM we will use the model $R_{i} = \gamma _{0} + \gamma _{1}\beta _{i}$, to represent a single cross section of returns for all the industries $i$ in our data set. We will run this regression for each cross section and then estimate $\gamma _{0}$ and $\gamma _{1}$ from the means we get from each iteration of the cross sectional regression. We can then test the CAPM by testing whether the means for $\gamma _{0}$ and $\gamma _{1}$ are equal to 0 using a t test. If the returns are fully explained by market risk, or $\beta _{i}$, then $\gamma _{0}$ should be approximately equal to 0 (technically it should be equal to the risk free rate, but since that is so close to 0 we can approximate it as such for ease of calculation). This is because if a portfolio is compensated for reasons other than market risk, $\gamma _{0}$ will capture those other sources of return by being larger than 0. Therefore, we will reject the CAPM if $\gamma _{0}$ is statistically significantly different from 0. We will also test if $\gamma _{1}$ is significantly different from 0, because if market risk predicts returns then its coefficient ($\gamma _{1}$) should be different from 0.
@@ -401,7 +421,7 @@ summary(aov2)
 #pairwise.t.test(transsize, aggcompfin$CompInd) 
 #TukeyHSD(aov2)
 par(mar=c(5,11,4,1))
-plot(TukeyHSD(aov2), las=1, cex.axis = 0.8)
+plot(TukeyHSD(aov2), las=1, cex.axis = 0.5)
 ```
 ```{r, include=FALSE}
 myResPlots2(aov2, label = "Size Composite Industry")
@@ -425,12 +445,9 @@ kruskal.test(transsize ~ aggcompfin$CompInd)
 #Comparing to One-Way ANOVA
 summary.aov(aov(transsize ~ aggcompfin$CompInd))
 ```
-*Analysis:*The chi-squared value for the Kruskal-Wallis test is high and the p-value is small enough to reject the null hypothesis at any reasonable level of alpha meaning that at least one group median is different from others. As stated earlier, The Kurskal-Wallis test is a good choice here given that the results are statistically significant and our original data is not normally distributed within each genre and the variances are not the same between groups (based on the results from Levene and Bartlette tests). 
+*Analysis:* The chi-squared value for the Kruskal-Wallis test is high and the p-value is small enough to reject the null hypothesis at any reasonable level of alpha meaning that at least one group median is different from others. As stated earlier, The Kurskal-Wallis test is a good choice here given that the results are statistically significant and our original data is not normally distributed within each genre and the variances are not the same between groups (based on the results from Levene and Bartlette tests). 
 
 ###Final Comments 
-  At the beginning of this project we set out with two main goals: to explore the variability in returns and characteristics of different industries over time, and to test the CAPM. Regarding the first objective, we observed that returns were actually very similar for most industries in the long run. From our tests, we didn't see much statistically dignificant difference in the mean returns since 1926 of each industry. However, we did notice variablility in some of the other metrics, such as size or BE/ME. For example, we noticed that TMT companies have a statistically significantly lower BE/ME ratio than commodities, meaning that the market gives them a higher valuation relative to their tangible assets. We also noticed that over time, certain companies, expecially technology companies, tend to be larger in market value than firms in other sectors.
-  We also rejected the CAPM by exploring whether market risk was able to explain the yearly cross section of industry returns. We found that there were unexplained sources of return in the model, meaning that either markets do not efficiently compensate investors for the risk they take or there are other sources of risk we did not include in the model (technically one could also argue that our estimates for beta were wrong, but it is hard to imagine that a small amount of estimation error could cause a t stat of 5). Either way, we showed with a high degree of statistical certainty that CAPM doesn't work. 
+At the beginning of this project we set out with two main goals: to explore the variability in returns and characteristics of different industries over time, and to test the CAPM. Regarding the first objective, we observed that returns were actually very similar for most industries in the long run. From our tests, we didn't see much statistically dignificant difference in the mean returns since 1926 of each industry. However, we did notice variablility in some of the other metrics, such as size or BE/ME. For example, we noticed that TMT companies have a statistically significantly lower BE/ME ratio than commodities, meaning that the market gives them a higher valuation relative to their tangible assets. We also noticed that over time, certain companies, especially technology companies, tend to be larger in market value than firms in other sectors.
 
-
-
-
+We also rejected the CAPM by exploring whether market risk was able to explain the yearly cross section of industry returns. We found that there were unexplained sources of return in the model, meaning that either markets do not efficiently compensate investors for the risk they take or there are other sources of risk we did not include in the model (technically one could also argue that our estimates for beta were wrong, but it is hard to imagine that a small amount of estimation error could cause a t stat of 5). Either way, we showed with a high degree of statistical certainty that CAPM doesn't work.
