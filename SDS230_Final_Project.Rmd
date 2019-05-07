@@ -384,7 +384,7 @@ print("SD by Genre")
 print("Ratio of Max/Min Sample SD")
 round(max(sds)/min(sds),1)
 ```
-The ratio is 4.4. Thus, our assumption for ANOVA is not satisfied. We will continue with the ANOVA analysis, but we will also use non-parametric tests to see if the variances are the same across composite industries. Specifically, we believe it best to use the Kruskal-Wallace test as it makes no assumptions of normality within each group or that the variances be equal (have a ratio less than 2). We examined our normal quantile plots before, and saw that the data was relatively normally distributed, but not for all genres. Thus, Welch's ANOVA is not a solid choice in this scenario. 
+The ratio is 4.4. Thus, our assumption for ANOVA is not satisfied. We will continue with the ANOVA analysis for the sake of this assignment, but we will also use non-parametric tests to see if the variances are the same across composite industries. Specifically, we believe it best to use the Kruskal-Wallace test as it makes no assumptions of normality within each group or that the variances be equal (have a ratio less than 2). We examined our normal quantile plots before, and saw that the data was relatively normally distributed, but not for all genres. Thus, Welch's ANOVA is not a solid choice in this scenario. 
 
 We begin with ANOVA and examine residual plots to see if our assumptions are met:
 ```{r}
