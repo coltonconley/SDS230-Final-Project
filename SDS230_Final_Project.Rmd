@@ -384,6 +384,7 @@ Using Backwards Stepwise regression, we eliminate the industry categorical varia
 ```{r}
 myResPlots2(mod2)
 ```
+
 Looking at the residual plots, we see that the residuals are approximately symmetric however there are some outliers. The residuals also aren't perfectly normally distributed as we can see from the quantile plot, suggesting that our fit isn't great and we should interpret model results keeping this in mind.
 
 ###ANOVA, Logit, Multinomial, or Webscraping 
