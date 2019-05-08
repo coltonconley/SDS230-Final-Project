@@ -312,12 +312,23 @@ permCor <- function(x, y, n_samp = 10000, plot = T){
       return(round(pval,5))
    }  
 }
-
-myCor(aggcompfin$`Composite BE/ME Ratio`, aggcompfin$`Composite Returns`)
-permCor(aggcompfin$`Composite BE/ME Ratio`, aggcompfin$`Composite Returns`, n_samp = 10000, plot = T)
 ```
 
-The original sample correlation returned 0.266, which leads us to believe that there is an extremely weak, positive, linear correlation between composite industry return and composite BE/ME. The permutation test on the other hand, returned a permuted p-value of 0, which allows us to conclude that the actual correlation between composite industry return and composite BE/ME appears to be significant at any reasonable level of alpha. The sample correlation without outliers returns a permuted sample correlation of .176 which was still significant at every reasonable level of alpha. 
+```{r, include=FALSE}
+myCor(aggcompfin$`Composite BE/ME Ratio`, aggcompfin$`Composite Returns`)
+permCor(aggcompfin$`Composite BE/ME Ratio`, aggcompfin$`Composite Returns`, n_samp = 10000, plot = T)
+#remove outliers
+aggcompoutlier <- aggcompfin[!aggcompfin$`Composite BE/ME Ratio` > 6,]
+```
+The original sample correlation returned 0.266, however we have reason to believe that this may be skewed due to outliers with BE/ME greater than 6. By removing the outliers, we hope to get a more accurate correlation.
+
+```{r}
+#new permutation test without outliers
+myCor(aggcompoutlier$`Composite BE/ME Ratio`, aggcompoutlier$`Composite Returns`)
+permCor(aggcompoutlier$`Composite BE/ME Ratio`, aggcompoutlier$`Composite Returns`, n_samp = 10000, plot = T)
+```
+
+The sample correlation without outliers returns a permuted sample correlation of .176 which was still significant at every reasonable level of alpha. The permutation test on the other hand, returned a permuted p-value of 0, which allows us to conclude that the actual correlation between composite industry return and composite BE/ME appears to be significant at any reasonable level of alpha.
 
 ###Regression Testing CAPM and Bootstrap
 As mentioned in the introduction, CAPM is a model for returns that says the excess returns of a portfolio (returns greater than the risk free rate) depend solely on the amount of market risk associated with that portfolio. Market risk can be estimated by calculating a portfolio's beta with the market, as we have already done by taking the covariance of the market and each portfolio scaled by the standard deviation of each. Now, to test the CAPM we will use the model $R_{i} = \gamma _{0} + \gamma _{1}\beta _{i}$, to represent a single cross section of returns for all the industries $i$ in our data set. We will run this regression for each cross section and then estimate $\gamma _{0}$ and $\gamma _{1}$ from the means we get from each iteration of the cross sectional regression. We can then examine the validity of CAPM by testing whether the means for $\gamma _{0}$ and $\gamma _{1}$ are equal to 0 using a t-test. If the returns are fully explained by market risk, or $\beta _{i}$, then $\gamma _{0}$ should be approximately equal to 0 (technically it should be equal to the risk free rate, but since that is so close to 0 we can approximate it as such for ease of calculation). This is because if a portfolio is compensated for reasons other than market risk, $\gamma _{0}$ will capture those other sources of return by being larger than 0. Therefore, we will reject the CAPM if $\gamma _{0}$ is statistically significantly different from 0. We will also test if $\gamma _{1}$ is significantly different from 0 because, if market risk predicts returns, then its coefficient ($\gamma _{1}$) should be different from 0.
@@ -373,6 +384,7 @@ Using Backwards Stepwise regression, we eliminate the industry categorical varia
 ```{r}
 myResPlots2(mod2)
 ```
+
 Looking at the residual plots, we see that the residuals are approximately symmetric however there are some outliers. The residuals also aren't perfectly normally distributed as we can see from the quantile plot, suggesting that our fit isn't great and we should interpret model results keeping this in mind.
 
 ###ANOVA, Logit, Multinomial, or Webscraping 
